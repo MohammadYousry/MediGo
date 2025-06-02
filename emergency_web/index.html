@@ -103,37 +103,40 @@
     </div>
 
     <script>
-    function showCard() {
-        const userId = document.getElementById("userIdInput").value.trim();
-        if (!/^\d{14}$/.test(userId)) {
-            alert("الرقم القومي يجب أن يتكون من 14 رقمًا.");
-            return;
+        function showCard() {
+            const userId = document.getElementById("userIdInput").value.trim();
+            if (!/^\d{14}$/.test(userId)) {
+                alert("الرقم القومي يجب أن يتكون من 14 رقمًا.");
+                return;
+            }
+
+            const frame = document.getElementById("cardFrame");
+            const loading = document.getElementById("loading-text");
+
+            loading.style.display = "block";
+            frame.style.display = "none";
+            frame.src = `card/emergency_card.html?user_id=${userId}`;
+
+            frame.onload = () => {
+                loading.style.display = "none";
+                frame.style.display = "block";
+            };
         }
 
-        const frame = document.getElementById("cardFrame");
-        const loading = document.getElementById("loading-text");
+        window.onload = function () {
+            const urlParams = new URLSearchParams(window.location.search);
+            const queryId = urlParams.get("user_id");
 
-        loading.style.display = "block";
-        frame.style.display = "none";
-        frame.src = `card/emergency_card.html?user_id=${userId}`;
+            const pathParts = window.location.pathname.split('/');
+            const pathId = pathParts[pathParts.length - 1];
 
-        frame.onload = () => {
-            loading.style.display = "none";
-            frame.style.display = "block";
+            const userId = /^\d{14}$/.test(queryId) ? queryId : /^\d{14}$/.test(pathId) ? pathId : null;
+
+            if (userId) {
+                document.getElementById("userIdInput").value = userId;
+                showCard();
+            }
         };
-    }
-
-    // ✅ كود فتح البطاقة تلقائيًا لو فيه user_id في الرابط
-    window.onload = function () {
-        const pathParts = window.location.pathname.split('/');
-        const potentialId = pathParts[pathParts.length - 1];
-
-        if (/^\d{14}$/.test(potentialId)) {
-            document.getElementById("userIdInput").value = potentialId;
-            showCard();
-        }
-    };
-</script>
-
+    </script>
 </body>
 </html>
