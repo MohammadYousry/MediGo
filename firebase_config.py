@@ -3,7 +3,7 @@ from firebase_admin import credentials, storage, firestore # أضفت firestore 
 
 # Initialize Firebase Admin SDK with credentials
 # عدّل السطر التالي ليشير إلى اسم ملف المفتاح الخاص بك مباشرة
-cred = credentials.Certificate("medi-go-eb65e-firebase-adminsdk-fbsvc-1b2efd27d3.json")
+cred = credentials.Certificate("/etc/secrets/firebase_key.json")
 
 # Initialize the app only if it hasn't been initialized yet
 if not firebase_admin._apps:
