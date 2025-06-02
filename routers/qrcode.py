@@ -116,7 +116,7 @@ async def get_qr_code(user_id: str):
                 age=calculated_age,
                 emergency_contacts=emergency_contacts,
                 allergies=allergies,
-                chronic_diseases=diagnoses,
+                chronic_diseases=chronic_diseases,
                 medications=medications,
                 surgeries=surgeries,
                 radiology=radiology,
