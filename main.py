@@ -1,7 +1,9 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.openapi.docs import get_swagger_ui_html
+from fastapi.responses import HTMLResponse
+import secrets
 
 # === Routers ===
 from routers import (
@@ -11,7 +13,14 @@ from routers import (
     emergency_contacts, risk_assessment, admin, user_role, auth, facilities, qrcode,
 )
 
-app = FastAPI(title="MediGO Backend", version="1.0")
+# === Create FastAPI App (hide default docs) ===
+app = FastAPI(
+    title="MediGO Backend",
+    version="1.0",
+    docs_url=None,
+    redoc_url=None,
+    openapi_url="/openapi.json"
+)
 
 # === CORS Middleware ===
 app.add_middleware(
@@ -22,7 +31,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# === Routers ===
+# === Include Routers ===
 app.include_router(auth.router)
 app.include_router(admin.router)
 app.include_router(users.router)
@@ -43,23 +52,28 @@ app.include_router(emergency_contacts.router)
 app.include_router(risk_assessment.router)
 app.include_router(user_role.router)
 
-# === Root Route ===
+# === Root Endpoint ===
 @app.get("/")
 def root():
     return {"message": "Welcome to the MediGO FastAPI Backend"}
 
-# === Swagger Auth Protection ===
+# === Secure Swagger UI (/docs) ===
 security = HTTPBasic()
 
-def verify(credentials: HTTPBasicCredentials = Depends(security)):
-    correct_username = credentials.username == "admin"
-    correct_password = credentials.password == "admin"
+def verify_docs_credentials(credentials: HTTPBasicCredentials = Depends(security)):
+    correct_username = secrets.compare_digest(credentials.username, "admin")
+    correct_password = secrets.compare_digest(credentials.password, "admin")
     if not (correct_username and correct_password):
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid username or password",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    return True
 
 @app.get("/docs", include_in_schema=False)
-def get_docs(credentials: HTTPBasicCredentials = Depends(verify)):
-    return get_swagger_ui_html(openapi_url="/openapi.json", title="MediGO Docs")
+def custom_swagger_ui(credentials: bool = Depends(verify_docs_credentials)):
+    return get_swagger_ui_html(openapi_url=app.openapi_url, title="MediGO Docs")
 
 # === Run Locally ===
 if __name__ == "__main__":
