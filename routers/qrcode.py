@@ -1,12 +1,11 @@
-from fastapi import APIRouter, HTTPException, File, Form, UploadFile
+from fastapi import APIRouter, HTTPException, Form
 from fastapi.responses import FileResponse
 import os
-import shutil
 from firebase_config import db
 from datetime import datetime
+import qrcode
 
 from models.schema import (
-    QRCodeCreate,
     QRCodeResponse,
     QRCodeWithUserInfoResponse,
     UserEmergencyInfo,
@@ -18,36 +17,45 @@ router = APIRouter(prefix="/qrcode", tags=["QR Codes"])
 def get_qr_code_doc_ref(user_id: str):
     return db.collection("Users").document(user_id).collection("QRCodeAccess").document("single_qr_code")
 
-async def save_uploaded_image(user_id: str, file: UploadFile) -> str:
+def generate_qr_image(user_id: str) -> str:
     try:
+        qr_url = f"https://medigo.site/{user_id}"
         folder = f"./qr_images/{user_id}"
         os.makedirs(folder, exist_ok=True)
-        file_name = f"{user_id}_qrcode.png"
-        file_path = os.path.join(folder, file_name)
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        return f"./qr_images/{user_id}/{file_name}".replace("\\", "/")
+        file_path = os.path.join(folder, f"{user_id}_qrcode.png")
+
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_H,
+            box_size=10,
+            border=4
+        )
+        qr.add_data(qr_url)
+        qr.make(fit=True)
+
+        img = qr.make_image(fill_color="black", back_color="white")
+        img.save(file_path)
+
+        return file_path.replace("\\", "/")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to save image: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"QR generation failed: {str(e)}")
 
 @router.post("/", response_model=QRCodeResponse)
 async def create_qr_code(
     user_id: str = Form(...),
-    expiration_date: str = Form(...),
-    qr_image: UploadFile = File(...)
+    expiration_date: str = Form(...)
 ):
     try:
-        saved_image_path = await save_uploaded_image(user_id, qr_image)
+        saved_image_path = generate_qr_image(user_id)
         now_timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-
-        image_url = f"https://medigo.onrender.com/card/emergency_card.html?user_id={user_id}"
+        image_url = f"https://medigo.site/{user_id}"
 
         qr_data_to_store = {
             "user_id": user_id,
             "last_accessed": now_timestamp,
             "expiration_date": expiration_date,
             "qr_image": saved_image_path,
-            "qr_data": f"{user_id}|{now_timestamp}",
+            "qr_data": image_url,
             "image_url": image_url
         }
 
@@ -56,7 +64,7 @@ async def create_qr_code(
 
         return QRCodeResponse(**qr_data_to_store)
     except Exception as e:
-        print(f"\u274c [create_qr_code] Error: {str(e)}")
+        print(f"❌ [create_qr_code] Error: {str(e)}")
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Error creating QR code: {str(e)}")
@@ -79,11 +87,10 @@ async def get_qr_code(user_id: str):
             raise HTTPException(status_code=404, detail="QR Code data not found for this user in QRCodeAccess.")
 
         qr_specific_data = qr_doc.to_dict()
-
         user_doc_ref = db.collection("Users").document(user_id)
         user_doc = user_doc_ref.get()
-        user_emergency_info_data = None
 
+        user_emergency_info_data = None
         if user_doc.exists:
             user_main_data = user_doc.to_dict()
             calculated_age = calculate_age(user_main_data.get("birthdate"))
@@ -136,7 +143,7 @@ async def get_qr_code(user_id: str):
     except HTTPException as http_exc:
         raise http_exc
     except Exception as e:
-        print(f"\u274c [get_qr_code] Unexpected error: {str(e)}")
+        print(f"❌ [get_qr_code] Unexpected error: {str(e)}")
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
@@ -145,11 +152,9 @@ async def get_qr_code(user_id: str):
 async def serve_image(user_id: str, file_name: str):
     try:
         image_file_path = os.path.join("qr_images", user_id, file_name)
-
         if not os.path.exists(image_file_path):
             raise HTTPException(status_code=404, detail="Image not found")
-
         return FileResponse(image_file_path, media_type="image/png")
     except Exception as e:
-        print(f"\u274c [serve_image] Error: {str(e)}")
+        print(f"❌ [serve_image] Error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error serving image: {str(e)}")
