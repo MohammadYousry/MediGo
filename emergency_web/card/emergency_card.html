@@ -1,160 +1,137 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>بطاقة الطوارئ - MediGO</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
-  <style>
-    body {
-      font-family: 'Cairo', sans-serif;
-      background: linear-gradient(to bottom, #e0f7fa, #ffffff);
-      margin: 0;
-      padding: 20px;
-      color: #004d40;
-      text-align: right;
-    }
-
-    .card {
-      background-color: #ffffff;
-      border-radius: 16px;
-      padding: 24px;
-      max-width: 720px;
-      margin: auto;
-      box-shadow: 0 0 12px rgba(0, 0, 0, 0.15);
-    }
-
-    .logo {
-      display: block;
-      margin: 0 auto 10px;
-      max-width: 120px;
-    }
-
-    .title {
-      text-align: center;
-      font-size: 1.6em;
-      margin-bottom: 20px;
-      color: #00796b;
-      font-weight: 700;
-    }
-
-    .profile-img {
-      display: block;
-      margin: 0 auto 20px;
-      border-radius: 50%;
-      width: 120px;
-      height: 120px;
-      object-fit: cover;
-      border: 3px solid #00796b;
-      background-color: #eee;
-    }
-
-    .section {
-      margin-bottom: 20px;
-    }
-
-    .section-title {
-      font-weight: 700;
-      font-size: 1.2em;
-      margin-bottom: 10px;
-      border-bottom: 2px solid #80cbc4;
-      padding-bottom: 5px;
-    }
-
-    .info-item {
-      margin-bottom: 8px;
-    }
-
-    .info-item strong {
-      display: inline-block;
-      width: 140px;
-      color: #00695c;
-    }
-
-    .list {
-      background-color: #e0f2f1;
-      padding: 10px;
-      border-radius: 8px;
-    }
-
-    .error {
-      color: red;
-      text-align: center;
-      font-weight: bold;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بطاقة طوارئ المريض | MediGO</title>
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: linear-gradient(to right, #e0f7fa, #f1f8e9);
+            margin: 0;
+            padding: 20px;
+            direction: rtl;
+        }
+        .container {
+            max-width: 850px;
+            background-color: white;
+            margin: auto;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .logo {
+            display: block;
+            max-width: 130px;
+            margin: auto;
+        }
+        h1 {
+            color: #00695c;
+            text-align: center;
+            margin: 10px 0 30px;
+        }
+        .section {
+            margin-bottom: 25px;
+        }
+        .section h2 {
+            color: #00796b;
+            border-bottom: 1px solid #b2dfdb;
+            padding-bottom: 6px;
+            margin-bottom: 12px;
+            font-size: 1.3em;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            row-gap: 10px;
+            column-gap: 10px;
+        }
+        .info-label {
+            color: #444;
+            font-weight: bold;
+        }
+        .info-value {
+            color: #222;
+        }
+        .pill {
+            display: inline-block;
+            background: #e0f2f1;
+            border-right: 4px solid #00796b;
+            padding: 6px 10px;
+            margin: 4px;
+            border-radius: 5px;
+        }
+        .emergency-contact {
+            background: #ffebee;
+            padding: 10px;
+            border: 1px solid #ef9a9a;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        .empty {
+            color: #aaa;
+            font-style: italic;
+        }
+    </style>
 </head>
 <body>
-  <div class="card">
-    <img src="medi go logo.png" alt="شعار MediGO" class="logo" />
-    <div class="title">بطاقة معلومات طارئة</div>
+    <div class="container">
+        <img src="https://raw.githubusercontent.com/MohammadYousry/MediGo/main/emergency_web/medi%20go%20logo.png" alt="MediGO Logo" class="logo">
+        <h1>بطاقة طوارئ المريض</h1>
 
-    <img id="profile_photo" src="" class="profile-img" alt="الصورة الشخصية" onerror="this.src='https://via.placeholder.com/120?text=No+Image'; this.alt='لا تتوفر صورة';" />
+        <div class="section">
+            <h2>المعلومات الشخصية</h2>
+            <div class="info-grid">
+                <div class="info-label">الاسم:</div><div class="info-value" id="full_name">جاري التحميل...</div>
+                <div class="info-label">العمر:</div><div class="info-value" id="age"></div>
+                <div class="info-label">النوع:</div><div class="info-value" id="gender"></div>
+                <div class="info-label">فصيلة الدم:</div><div class="info-value" id="blood_type"></div>
+                <div class="info-label">الرقم القومي:</div><div class="info-value" id="national_id"></div>
+                <div class="info-label">الهاتف:</div><div class="info-value" id="phone_number"></div>
+                <div class="info-label">العنوان:</div><div class="info-value" id="address"></div>
+            </div>
+        </div>
 
-    <div class="section">
-      <div class="section-title">المعلومات الشخصية</div>
-      <div class="info-item"><strong>الاسم الكامل:</strong> <span id="full_name"></span></div>
-      <div class="info-item"><strong>العمر:</strong> <span id="age"></span></div>
-      <div class="info-item"><strong>النوع:</strong> <span id="gender"></span></div>
-      <div class="info-item"><strong>الرقم القومي:</strong> <span id="national_id"></span></div>
-      <div class="info-item"><strong>فصيلة الدم:</strong> <span id="blood_type"></span></div>
-      <div class="info-item"><strong>الهاتف:</strong> <span id="phone_number"></span></div>
-      <div class="info-item"><strong>العنوان:</strong> <span id="address"></span></div>
+        <div class="section">
+            <h2>الأمراض المزمنة</h2>
+            <div id="chronic_diseases_list" class="info-value empty">لا توجد بيانات</div>
+        </div>
+
+        <div class="section">
+            <h2>الأدوية</h2>
+            <div id="medications_list" class="info-value empty">لا توجد بيانات</div>
+        </div>
+
+        <div class="section">
+            <h2>الحساسية</h2>
+            <div id="allergies_list" class="info-value empty">لا توجد بيانات</div>
+        </div>
+
+        <div class="section">
+            <h2>نتائج التحاليل</h2>
+            <div id="biomarkers_list" class="info-value empty">لا توجد بيانات</div>
+        </div>
+
+        <div class="section">
+            <h2>ضغط الدم</h2>
+            <div class="info-label">المرحلة:</div><div class="info-value" id="bp_stage">لا توجد بيانات</div>
+        </div>
+
+        <div class="section">
+            <h2>العمليات الجراحية</h2>
+            <div id="surgeries_list" class="info-value empty">لا توجد بيانات</div>
+        </div>
+
+        <div class="section">
+            <h2>الأشعة</h2>
+            <div id="radiology_list" class="info-value empty">لا توجد بيانات</div>
+        </div>
+
+        <div class="section">
+            <h2>جهات اتصال الطوارئ</h2>
+            <div id="emergency_contacts_list" class="info-value empty">لا توجد بيانات</div>
+        </div>
     </div>
-
-    <div class="section">
-      <div class="section-title">الأمراض المزمنة</div>
-      <ul id="chronic_diseases_list" class="list"></ul>
-    </div>
-
-    <div class="section">
-      <div class="section-title">الحساسية</div>
-      <ul id="allergies_list" class="list"></ul>
-    </div>
-
-    <div class="section">
-      <div class="section-title">الأدوية الحالية</div>
-      <ul id="medications_list" class="list"></ul>
-    </div>
-
-    <div class="section">
-      <div class="section-title">جهات اتصال الطوارئ</div>
-      <ul id="emergency_contacts_list" class="list"></ul>
-    </div>
-  </div>
-
-  <script>
-    const userId = new URLSearchParams(window.location.search).get("user_id");
-    const api = `https://medigo.onrender.com/qrcode/${userId}`;
-
-    fetch(api)
-      .then(res => res.json())
-      .then(data => {
-        const u = data.user_info;
-        document.getElementById("profile_photo").src = u.profile_picture_url || '';
-        document.getElementById("full_name").textContent = u.full_name || 'غير متوفر';
-        document.getElementById("age").textContent = u.age || 'غير متوفر';
-        document.getElementById("gender").textContent = u.gender || 'غير متوفر';
-        document.getElementById("national_id").textContent = u.national_id || 'غير متوفر';
-        document.getElementById("blood_type").textContent = u.blood_type || 'غير متوفر';
-        document.getElementById("phone_number").textContent = u.phone_number || 'غير متوفر';
-        document.getElementById("address").textContent = `${u.address || ''} ${u.city || ''} ${u.region || ''}`.trim();
-
-        const chronic = document.getElementById("chronic_diseases_list");
-        u.chronic_diseases?.forEach(d => chronic.innerHTML += `<li>${d}</li>`);
-
-        const allergies = document.getElementById("allergies_list");
-        u.allergies?.forEach(a => allergies.innerHTML += `<li>${a.allergen} (رد الفعل: ${a.reaction || 'غير محدد'}, الشدة: ${a.severity || 'غير محددة'})</li>`);
-
-        const meds = document.getElementById("medications_list");
-        u.medications?.forEach(m => meds.innerHTML += `<li>${m.name} - ${m.dosage || '؟'} × ${m.frequency || '؟'}</li>`);
-
-        const contacts = document.getElementById("emergency_contacts_list");
-        u.emergency_contacts?.forEach(c => contacts.innerHTML += `<li><strong>${c.name}</strong> (${c.relationship}) - ${c.phone_number}</li>`);
-      })
-      .catch(err => {
-        document.body.innerHTML = `<div class="error">تعذر تحميل البيانات. تأكد من وجود اتصال بالإنترنت وصحة معرف المستخدم.</div>`;
-      });
-  </script>
 </body>
 </html>
