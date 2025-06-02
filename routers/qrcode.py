@@ -92,6 +92,7 @@ async def get_qr_code(user_id: str):
             allergies = await fetch_subcollection_data(user_id, "allergies")
             medications = await fetch_subcollection_data(user_id, "medications")
             diagnoses = await fetch_subcollection_data(user_id, "diagnoses")
+            chronic_diseases = [entry.get("diagnosis_name", "غير محدد") for entry in diagnoses]
             surgeries = await fetch_subcollection_data(user_id, "surgeries")
             radiology = await fetch_subcollection_data(user_id, "radiology")
             bloodbiomarkers = await fetch_subcollection_data(user_id, "bloodbiomarkers")
