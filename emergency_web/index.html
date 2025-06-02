@@ -1,0 +1,85 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>MediGO - بطاقة الطوارئ</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #f1f1f1;
+            text-align: center;
+            direction: rtl;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 600px;
+            margin: auto;
+            box-shadow: 0 0 12px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #00796B;
+        }
+        .subtitle {
+            margin-top: -10px;
+            color: #333;
+            font-weight: normal;
+        }
+        .flag {
+            width: 60px;
+            margin-top: 10px;
+        }
+        input {
+            padding: 10px;
+            width: 80%;
+            margin-top: 20px;
+            font-size: 1em;
+        }
+        button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            background-color: #00796B;
+            color: white;
+            border: none;
+            font-size: 1em;
+            cursor: pointer;
+        }
+        iframe {
+            display: none;
+            width: 100%;
+            height: 2000px;
+            border: none;
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <img src="medi go logo.png" alt="MediGO" style="width:120px;"><br>
+        <h1>أهلاً بك في MediGO</h1>
+        <p class="subtitle">هذا مشروع تخرج من إعداد طلاب مصريين لمساعدة أهل مصر في الحالات الطبية الطارئة</p>
+        <img src="https://upload.wikimedia.org/wikipedia/commons/f/fe/Flag_of_Egypt.svg" class="flag" alt="علم مصر"><br>
+        <input type="text" id="userIdInput" placeholder="ادخل الرقم القومي للمريض">
+        <br>
+        <button onclick="showCard()">عرض البيانات</button>
+        <iframe id="cardFrame"></iframe>
+    </div>
+
+    <script>
+        function showCard() {
+            const userId = document.getElementById("userIdInput").value.trim();
+            if (userId === "") {
+                alert("من فضلك أدخل رقم المريض.");
+                return;
+            }
+            const frame = document.getElementById("cardFrame");
+            frame.src = `card/emergency_card.html?user_id=${userId}`;
+            frame.style.display = "block";
+        }
+    </script>
+</body>
+</html>
