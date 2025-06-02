@@ -1,8 +1,8 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException
 from firebase_config import db
-from models.schema import UserCreate, UserResponse, calculate_age
+from models.schema import UserCreate, UserUpdate, UserResponse, calculate_age
 from datetime import datetime
-from typing import List, Optional
+from typing import List
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -38,16 +38,23 @@ def create_user(user: UserCreate):
     return {**user.dict(), "age": age}
 
 # -------------------- Update User --------------------
-@router.put("/{national_id}", response_model=UserResponse)
-def update_user(national_id: str, user: UserCreate):
+@router.put("/{national_id}", response_model=dict)
+async def update_user(national_id: str, updated_user: UserUpdate):
     user_ref = get_user_ref(national_id)
-    if not user_ref.get().exists:
+    existing_user = user_ref.get()
+    if not existing_user.exists:
         raise HTTPException(status_code=404, detail="User not found")
 
-    age = calculate_age(user.birthdate)
-    updated_data = {**user.dict(), "age": age}
-    user_ref.update(updated_data)
-    return {**user.dict(), "age": age}
+    updates = updated_user.dict(exclude_unset=True)
+
+    # Calculate age from birthdate if provided
+    if "birthdate" in updates:
+        birthday_date = datetime.strptime(updates["birthdate"], "%Y-%m-%d")
+        age = (datetime.now().date() - birthday_date.date()).days // 365
+        updates["age"] = age
+
+    user_ref.update(updates)
+    return {"message": "User updated successfully"}
 
 # -------------------- Get Single User --------------------
 @router.get("/{national_id}", response_model=UserResponse)
@@ -60,9 +67,6 @@ def get_user(national_id: str):
 # -------------------- Get Users List --------------------
 @router.get("/", response_model=List[UserResponse])
 def get_users(name: str = "", national_id: str = ""):
-    """
-    Fetch users by name or national_id. Both fields are optional.
-    """
     users_ref = db.collection("Users")
     results = []
 

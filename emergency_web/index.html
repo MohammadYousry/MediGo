@@ -79,31 +79,49 @@
             margin-top: 30px;
             display: none;
         }
+
+        #loading-text {
+            display: none;
+            font-size: 1.1rem;
+            color: #555;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <img src="medi go logo.png" alt="MediGO Logo" class="logo">
+        <img src="https://raw.githubusercontent.com/MohammadYousry/MediGo/main/emergency_web/medi_go_logo.png" alt="MediGO Logo" class="logo">
         <h1>مرحبا بك في MediGO</h1>
         <p class="subtitle">بطاقة طوارئ طبية لخدمة المصابين وفرق الإسعاف في مصر</p>
         <img src="https://upload.wikimedia.org/wikipedia/commons/f/fe/Flag_of_Egypt.svg" alt="علم مصر" class="flag">
-        
-        <input type="text" id="userIdInput" placeholder="ادخل الرقم القومي للمريض">
+
+        <label for="userIdInput" style="display:none;">الرقم القومي</label>
+        <input type="text" id="userIdInput" placeholder="ادخل الرقم القومي للمريض" maxlength="14">
         <button onclick="showCard()">عرض البيانات</button>
 
+        <p id="loading-text">جاري تحميل البطاقة...</p>
         <iframe id="cardFrame"></iframe>
     </div>
 
     <script>
         function showCard() {
             const userId = document.getElementById("userIdInput").value.trim();
-            if (userId === "") {
-                alert("من فضلك أدخل الرقم القومي للمريض.");
+            if (!/^\d{14}$/.test(userId)) {
+                alert("الرقم القومي يجب أن يتكون من 14 رقمًا.");
                 return;
             }
+
             const frame = document.getElementById("cardFrame");
+            const loading = document.getElementById("loading-text");
+
+            loading.style.display = "block";
+            frame.style.display = "none";
             frame.src = `card/emergency_card.html?user_id=${userId}`;
-            frame.style.display = "block";
+
+            // Show iframe once loaded
+            frame.onload = () => {
+                loading.style.display = "none";
+                frame.style.display = "block";
+            };
         }
     </script>
 </body>

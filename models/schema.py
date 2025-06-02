@@ -53,6 +53,20 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8, description="User password")
 
+class UserUpdate(BaseModel):
+    full_name: Optional[str] = None
+    email: Optional[str] = None
+    gender: Optional[str] = None
+    phone_number: Optional[str] = None
+    region: Optional[str] = None
+    city: Optional[str] = None
+    address: Optional[str] = None
+    birthdate: Optional[str] = None
+    blood_type: Optional[str] = None
+    current_smoker: Optional[bool] = None
+    cigs_per_day: Optional[int] = None
+    doctoremail: Optional[str] = None
+
 class UserResponse(UserBase):
     user_id: str = Field(..., description="Unique user identifier (often same as national_id or a UUID)")
     is_active: Optional[bool] = Field(True, description="User account status")
@@ -100,8 +114,24 @@ class Facility(FacilityBase):
 
 # --- QR Code Models ---
 class QRCodeCreate(BaseModel): user_id: str; expiration_date: str
-class QRCodeResponse(BaseModel): user_id: str; last_accessed: str; expiration_date: str; qr_image: str; qr_data: Optional[str] = None
-class QRCodeWithUserInfoResponse(BaseModel): user_id: str; last_accessed: Optional[str] = None; expiration_date: Optional[str] = None; qr_image: Optional[str] = None; user_info: Optional[UserEmergencyInfo] = None
+user_info: Optional[UserEmergencyInfo] = None
+
+class QRCodeResponse(BaseModel):
+    user_id: str
+    last_accessed: str
+    expiration_date: str
+    qr_image: str
+    qr_data: str
+    image_url: Optional[str] = None
+
+class QRCodeWithUserInfoResponse(BaseModel):
+    user_id: str
+    last_accessed: Optional[str] = None
+    expiration_date: Optional[str] = None
+    qr_image: Optional[str] = None
+    image_url: Optional[str] = None  # ✅ أضف السطر ده
+    user_info: Optional[UserEmergencyInfo] = None
+
 
 # --- Doctor Assignment Models ---
 class DoctorAssignmentBase(BaseModel): patient_national_id: str; doctor_email: EmailStr; assignment_date: Optional[str] = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S")); notes: Optional[str] = None

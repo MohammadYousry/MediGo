@@ -82,6 +82,8 @@ def update_medication(national_id: str, record_id: str, entry: MedicationEntry):
             updated_data.pop("start_date", None)
 
     med_ref.update(updated_data)
+    updated_data["timestamp"] = datetime.now(egypt_tz).strftime("%Y-%m-%d %H:%M:%S")
+
     return {"message": "Medication updated", "id": record_id}
 
 
