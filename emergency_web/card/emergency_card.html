@@ -267,7 +267,7 @@
 
             console.log(`Fetching data for user_id: ${userId}`);
             const apiBaseUrl = 'http://127.0.0.1:8000'; 
-            const apiUrl = `${apiBaseUrl}/qrcode/${userId}`;
+            const apiUrl = `https://medigo.onrender.com/qrcode/${userId}`;
 
             try {
                 const response = await fetch(apiUrl, {
