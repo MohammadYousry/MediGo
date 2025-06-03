@@ -19,7 +19,7 @@ def get_qr_code_doc_ref(user_id: str):
 
 def generate_qr_image(user_id: str) -> str:
     try:
-        qr_url = f"https://medigo.site/{user_id}"
+        qr_url = f"https:/https://medigo-eg.netlify.app//{user_id}"
         folder = f"./qr_images/{user_id}"
         os.makedirs(folder, exist_ok=True)
         file_path = os.path.join(folder, f"{user_id}_qrcode.png")
