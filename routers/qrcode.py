@@ -4,6 +4,8 @@ import os
 from firebase_config import db
 from datetime import datetime
 import qrcode
+import firebase_admin
+from firebase_admin import storage
 
 from models.schema import (
     QRCodeResponse,
@@ -17,13 +19,15 @@ router = APIRouter(prefix="/qrcode", tags=["QR Codes"])
 def get_qr_code_doc_ref(user_id: str):
     return db.collection("Users").document(user_id).collection("QRCodeAccess").document("single_qr_code")
 
+
 def generate_qr_image(user_id: str) -> str:
     try:
-        qr_url = f"https://medigo-eg.netlify.app/{user_id}"  # ✅ الرابط الصحيح هنا
-        folder = f"./qr_images/{user_id}"
-        os.makedirs(folder, exist_ok=True)
-        file_path = os.path.join(folder, f"{user_id}_qrcode.png")
+        qr_url = f"https://medigo-eg.netlify.app/{user_id}"
+        local_folder = f"./qr_images/{user_id}"
+        os.makedirs(local_folder, exist_ok=True)
+        local_file_path = os.path.join(local_folder, f"{user_id}_qrcode.png")
 
+        # توليد QR
         qr = qrcode.QRCode(
             version=1,
             error_correction=qrcode.constants.ERROR_CORRECT_H,
@@ -32,13 +36,20 @@ def generate_qr_image(user_id: str) -> str:
         )
         qr.add_data(qr_url)
         qr.make(fit=True)
-
         img = qr.make_image(fill_color="black", back_color="white")
-        img.save(file_path)
+        img.save(local_file_path)
 
-        return file_path.replace("\\", "/")
+        # ✅ رفع على Firebase Storage
+        bucket = storage.bucket()
+        blob = bucket.blob(f"qr_codes/{user_id}_qrcode.png")
+        blob.upload_from_filename(local_file_path)
+        blob.make_public()
+
+        return blob.public_url  # يرجع رابط مباشر للصورة
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"QR generation failed: {str(e)}")
+
 
 @router.post("/", response_model=QRCodeResponse)
 async def create_qr_code(
