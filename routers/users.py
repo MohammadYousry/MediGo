@@ -54,9 +54,9 @@ async def update_user(national_id: str, updated_user: UserUpdate):
 
     updates = updated_user.dict(exclude_unset=True)
 
-    if "birthdate" in updates:
+    if "date_of_birth" in updates:
         try:
-            birthday_date = datetime.strptime(updates["birthdate"], "%Y-%m-%d")
+            birthday_date = datetime.strptime(updates["date_of_birth"], "%Y-%m-%d")
             age = (datetime.now().date() - birthday_date.date()).days // 365
             updates["age"] = age
         except Exception:
