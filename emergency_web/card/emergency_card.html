@@ -147,7 +147,7 @@
         document.getElementById('full_name').textContent = user.full_name || 'غير متوفر';
         document.getElementById('age').textContent = user.age || 'غير متوفر';
         document.getElementById('gender').textContent = user.gender || 'غير متوفر';
-        document.getElementById('blood_type').textContent = user.blood_group || 'غير متوفر';
+        document.getElementById('blood_type').textContent = user.blood_type || user.blood_group || 'غير متوفر';
         document.getElementById('national_id').textContent = user.national_id || 'غير متوفر';
         document.getElementById('phone_number').textContent = user.phone_number || 'غير متوفر';
         document.getElementById('address').textContent = [user.address, user.city, user.region].filter(Boolean).join(', ') || 'غير متوفر';
