@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="بطاقة طوارئ طبية فورية من MediGO تعرض بيانات المريض بشكل منسق وسريع.">
+  <meta http-equiv="Content-Language" content="ar">
   <title>بطاقة طوارئ المريض | MediGO</title>
   <style>
     body {
@@ -81,6 +83,12 @@
       color: #aaa;
       font-style: italic;
     }
+    #loading-text {
+      text-align: center;
+      color: #888;
+      font-size: 1.1em;
+      margin-bottom: 15px;
+    }
   </style>
 </head>
 <body>
@@ -88,6 +96,7 @@
     <img src="https://medigo-eg.netlify.app/medi_go_logo.png" alt="MediGO Logo" class="logo">
     <img id="profile_photo" class="profile-img" src="" alt="الصورة الشخصية">
     <h1>بطاقة طوارئ المريض</h1>
+    <p id="loading-text">جاري تحميل البيانات...</p>
 
     <div class="section">
       <h2>المعلومات الشخصية</h2>
@@ -102,45 +111,14 @@
       </div>
     </div>
 
-    <div class="section">
-      <h2>الأمراض المزمنة</h2>
-      <div id="chronic_diseases_list" class="info-value empty">لا توجد بيانات</div>
-    </div>
-
-    <div class="section">
-      <h2>الأدوية</h2>
-      <div id="medications_list" class="info-value empty">لا توجد بيانات</div>
-    </div>
-
-    <div class="section">
-      <h2>الحساسية</h2>
-      <div id="allergies_list" class="info-value empty">لا توجد بيانات</div>
-    </div>
-
-    <div class="section">
-      <h2>نتائج التحاليل</h2>
-      <div id="biomarkers_list" class="info-value empty">لا توجد بيانات</div>
-    </div>
-
-    <div class="section">
-      <h2>ضغط الدم</h2>
-      <div class="info-label">المرحلة:</div><div class="info-value" id="bp_stage">لا توجد بيانات</div>
-    </div>
-
-    <div class="section">
-      <h2>العمليات الجراحية</h2>
-      <div id="surgeries_list" class="info-value empty">لا توجد بيانات</div>
-    </div>
-
-    <div class="section">
-      <h2>الأشعة</h2>
-      <div id="radiology_list" class="info-value empty">لا توجد بيانات</div>
-    </div>
-
-    <div class="section">
-      <h2>جهات اتصال الطوارئ</h2>
-      <div id="emergency_contacts_list" class="info-value empty">لا توجد بيانات</div>
-    </div>
+    <div class="section"><h2>الأمراض المزمنة</h2><div id="chronic_diseases_list" class="info-value empty">لا توجد بيانات</div></div>
+    <div class="section"><h2>الأدوية</h2><div id="medications_list" class="info-value empty">لا توجد بيانات</div></div>
+    <div class="section"><h2>الحساسية</h2><div id="allergies_list" class="info-value empty">لا توجد بيانات</div></div>
+    <div class="section"><h2>نتائج التحاليل</h2><div id="biomarkers_list" class="info-value empty">لا توجد بيانات</div></div>
+    <div class="section"><h2>ضغط الدم</h2><div class="info-label">المرحلة:</div><div class="info-value" id="bp_stage">لا توجد بيانات</div></div>
+    <div class="section"><h2>العمليات الجراحية</h2><div id="surgeries_list" class="info-value empty">لا توجد بيانات</div></div>
+    <div class="section"><h2>الأشعة</h2><div id="radiology_list" class="info-value empty">لا توجد بيانات</div></div>
+    <div class="section"><h2>جهات اتصال الطوارئ</h2><div id="emergency_contacts_list" class="info-value empty">لا توجد بيانات</div></div>
   </div>
 
   <script>
@@ -148,22 +126,21 @@
       const userId = new URLSearchParams(window.location.search).get('user_id');
       if (!userId) return;
 
+      document.getElementById("loading-text").style.display = "block";
+
       try {
         const response = await fetch(`https://medigo.onrender.com/qrcode/${userId}`);
+        if (!response.ok) throw new Error("Failed to fetch");
+
         const data = await response.json();
         const user = data.user_info;
 
-        // صورة المريض
         const profile = document.getElementById('profile_photo');
-        if (user.profile_picture_url) {
-          profile.src = user.profile_picture_url;
-          profile.alt = "صورة المريض";
-        } else {
+        profile.src = user.profile_picture_url || "https://medigo-eg.netlify.app/medi_go_logo.png";
+        profile.onerror = () => {
           profile.src = "https://medigo-eg.netlify.app/medi_go_logo.png";
-          profile.alt = "لا تتوفر صورة";
-        }
+        };
 
-        // بيانات أساسية
         document.getElementById('full_name').textContent = user.full_name || 'غير متوفر';
         document.getElementById('age').textContent = user.age || 'غير متوفر';
         document.getElementById('gender').textContent = user.gender || 'غير متوفر';
@@ -172,12 +149,11 @@
         document.getElementById('phone_number').textContent = user.phone_number || 'غير متوفر';
         document.getElementById('address').textContent = [user.address, user.city, user.region].filter(Boolean).join(', ') || 'غير متوفر';
 
-        // وظائف العرض لكل قسم
-        const renderList = (id, items, getText) => {
+        const renderList = (id, items, format) => {
           const el = document.getElementById(id);
           if (items?.length) {
             el.classList.remove('empty');
-            el.innerHTML = items.map(getText).join('');
+            el.innerHTML = items.map(format).join('');
           }
         };
 
@@ -190,7 +166,6 @@
 
         document.getElementById('bp_stage').textContent = user.hypertension_stage || 'غير متوفر';
 
-        // جهات اتصال الطوارئ
         const contactContainer = document.getElementById('emergency_contacts_list');
         if (user.emergency_contacts?.length) {
           contactContainer.classList.remove('empty');
@@ -205,7 +180,21 @@
 
       } catch (error) {
         console.error("Fetch error:", error);
-        document.getElementById('full_name').textContent = "حدث خطأ أثناء تحميل البيانات.";
+        const errorText = "⚠️ تعذر تحميل البيانات.";
+        [
+          'full_name', 'age', 'gender', 'blood_type', 'national_id', 'phone_number', 'address',
+          'chronic_diseases_list', 'medications_list', 'allergies_list',
+          'biomarkers_list', 'surgeries_list', 'radiology_list',
+          'bp_stage', 'emergency_contacts_list'
+        ].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) {
+            el.textContent = errorText;
+            el.classList.add("empty");
+          }
+        });
+      } finally {
+        document.getElementById("loading-text").style.display = "none";
       }
     }
 
