@@ -8,8 +8,9 @@ cred = credentials.Certificate("/etc/secrets/firebase_key.json")
 # Initialize the app only if it hasn't been initialized yet
 if not firebase_admin._apps:
     firebase_admin.initialize_app(cred, {
-        'storageBucket': 'medi-go-eb65e.appspot.com' # تأكد أن هذا هو اسم الـ bucket الصحيح لمشروعك
+        'storageBucket': 'medi-go-eb65e.firebasestorage.app'
     })
+
 
 # Firestore client
 db = firestore.client()
