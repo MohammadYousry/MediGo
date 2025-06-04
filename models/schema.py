@@ -11,13 +11,19 @@ def resolve_added_by_name(added_by_id: str, db_session) -> Optional[str]:
     print(f"[Placeholder] resolve_added_by_name called for {added_by_id}")
     return "Added By Name (Placeholder)"
 
-def calculate_age(birthdate_str: Optional[str]) -> int:
+def calculate_age(birthdate_str: Optional[Union[str, date]]) -> Optional[int]:
+    if not birthdate_str:
+        return None
     try:
-        birthdate_dt_obj = datetime.strptime(birthdate_str, "%Y-%m-%d").date()
+        if isinstance(birthdate_str, date):
+            birthdate_dt_obj = birthdate_str
+        else:
+            birthdate_dt_obj = datetime.strptime(birthdate_str, "%Y-%m-%d").date()
+
         today = date.today()
         return today.year - birthdate_dt_obj.year - ((today.month, today.day) < (birthdate_dt_obj.month, birthdate_dt_obj.day))
     except (ValueError, TypeError):
-        return -1
+        return None
 
 # --- Base Models ---
 class BaseInput(BaseModel):
