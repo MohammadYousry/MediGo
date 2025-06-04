@@ -6,6 +6,7 @@
   <meta name="description" content="بطاقة طوارئ طبية فورية من MediGO تعرض بيانات المريض بشكل منسق وسريع.">
   <meta http-equiv="Content-Language" content="ar">
   <title>بطاقة طوارئ المريض | MediGO</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600&display=swap" rel="stylesheet">
   <style>
     body {
       font-family: 'Cairo', sans-serif;
@@ -135,20 +136,23 @@
         const data = await response.json();
         const user = data.user_info;
 
+        // ✅ الصورة
         const profile = document.getElementById('profile_photo');
-        profile.src = user.profile_picture_url || "https://medigo-eg.netlify.app/medi_go_logo.png";
+        profile.src = user.profile_photo || "https://medigo-eg.netlify.app/medi_go_logo.png";
         profile.onerror = () => {
           profile.src = "https://medigo-eg.netlify.app/medi_go_logo.png";
         };
 
+        // ✅ بيانات أساسية
         document.getElementById('full_name').textContent = user.full_name || 'غير متوفر';
         document.getElementById('age').textContent = user.age || 'غير متوفر';
         document.getElementById('gender').textContent = user.gender || 'غير متوفر';
-        document.getElementById('blood_type').textContent = user.blood_type || 'غير متوفر';
+        document.getElementById('blood_type').textContent = user.blood_group || 'غير متوفر';
         document.getElementById('national_id').textContent = user.national_id || 'غير متوفر';
         document.getElementById('phone_number').textContent = user.phone_number || 'غير متوفر';
         document.getElementById('address').textContent = [user.address, user.city, user.region].filter(Boolean).join(', ') || 'غير متوفر';
 
+        // ✅ البيانات المتعددة
         const renderList = (id, items, format) => {
           const el = document.getElementById(id);
           if (items?.length) {
@@ -164,8 +168,10 @@
         renderList("surgeries_list", user.surgeries, s => `<span class="pill">${s.name || 'عملية'} - ${s.date || ''}</span>`);
         renderList("radiology_list", user.radiology, r => `<span class="pill">${r.test_type || 'نوع'} - ${r.result || ''}</span>`);
 
+        // ✅ ضغط الدم
         document.getElementById('bp_stage').textContent = user.hypertension_stage || 'غير متوفر';
 
+        // ✅ جهات الطوارئ
         const contactContainer = document.getElementById('emergency_contacts_list');
         if (user.emergency_contacts?.length) {
           contactContainer.classList.remove('empty');
