@@ -2,6 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Language" content="ar">
     <title>MediGO - بطاقة الطوارئ</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600&display=swap" rel="stylesheet">
@@ -121,22 +122,28 @@
                 loading.style.display = "none";
                 frame.style.display = "block";
             };
+
+            frame.onerror = () => {
+                loading.style.display = "none";
+                alert("تعذر تحميل البطاقة. تأكد من الرقم القومي.");
+            };
         }
 
         window.onload = function () {
             const urlParams = new URLSearchParams(window.location.search);
-            const queryId = urlParams.get("user_id");
+            const userId = urlParams.get("user_id");
 
-            const pathParts = window.location.pathname.split('/');
-            const pathId = pathParts[pathParts.length - 1];
-
-            const userId = /^\d{14}$/.test(queryId) ? queryId : /^\d{14}$/.test(pathId) ? pathId : null;
-
-            if (userId) {
+            if (userId && /^\d{14}$/.test(userId)) {
                 document.getElementById("userIdInput").value = userId;
                 showCard();
             }
         };
+
+        document.getElementById("userIdInput").addEventListener("keydown", function(event) {
+            if (event.key === "Enter") {
+                showCard();
+            }
+        });
     </script>
 </body>
 </html>
