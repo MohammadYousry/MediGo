@@ -153,7 +153,11 @@ class SurgeryEntry(SurgeryBase, BaseRecord): # BaseRecord already has Config
 
 # --- BloodBiomarker Models ---
 class TestResultItem(BaseModel): test_name: str; value: Any; unit: Optional[str] = None; reference_range: Optional[str] = None; flag: Optional[str] = None
-class BloodBiomarkerInput(BaseInput): test_date: str = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d")); test_type: str; results: List[TestResultItem]
+class BloodBiomarkerInput(BaseInput):
+    test_date: str = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d"))
+    test_type: str
+    results: List[TestResultItem]
+    added_by: str  # ✅ أضف السطر ده هنا
 class BloodBioMarker(BloodBiomarkerInput, BaseRecord): # BaseRecord already has Config
     pass
 
