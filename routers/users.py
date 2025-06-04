@@ -17,14 +17,19 @@ def create_user(user: UserCreate):
     if user_ref.get().exists:
         raise HTTPException(status_code=400, detail="User already exists")
 
-    age = calculate_age(user.birthdate)
+    try:
+        age = calculate_age(user.birthdate)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid birthdate format. Use YYYY-MM-DD.")
+
     user_data = {**user.dict(), "age": age}
     user_ref.set(user_data)
 
-    # Check if doctor is registered
+    # ✅ Doctor check and admin notification
     if user.doctoremail:
         doctor_query = db.collection("Doctors").where("email", "==", user.doctoremail).limit(1).stream()
         doctor_doc = next(doctor_query, None)
+
         if not doctor_doc:
             notif_id = f"{user.doctoremail}_{user.national_id}"
             db.collection("AdminNotifications").document("unregistered_doctors") \
@@ -34,6 +39,8 @@ def create_user(user: UserCreate):
                   "message": f"⚠️ Patient {user.full_name} ({user.national_id}) assigned to unregistered doctor: {user.doctoremail}",
                   "timestamp": datetime.now().isoformat()
               })
+
+    print(f"✅ Created user {user.full_name} ({user.national_id})")
 
     return {**user.dict(), "age": age}
 
@@ -47,13 +54,16 @@ async def update_user(national_id: str, updated_user: UserUpdate):
 
     updates = updated_user.dict(exclude_unset=True)
 
-    # Calculate age from birthdate if provided
     if "birthdate" in updates:
-        birthday_date = datetime.strptime(updates["birthdate"], "%Y-%m-%d")
-        age = (datetime.now().date() - birthday_date.date()).days // 365
-        updates["age"] = age
+        try:
+            birthday_date = datetime.strptime(updates["birthdate"], "%Y-%m-%d")
+            age = (datetime.now().date() - birthday_date.date()).days // 365
+            updates["age"] = age
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid birthdate format. Use YYYY-MM-DD.")
 
     user_ref.update(updates)
+    print(f"🔄 Updated user {national_id}")
     return {"message": "User updated successfully"}
 
 # -------------------- Get Single User --------------------
@@ -73,11 +83,12 @@ def get_users(name: str = "", national_id: str = ""):
     for doc in users_ref.stream():
         user = doc.to_dict()
         user["id"] = doc.id
-        full_name = user.get("full_name", "").lower()
-        national = user.get("national_id", "").lower()
-        doctor_email = user.get("doctoremail", "").lower()
 
-        if name.lower() in full_name or national_id.lower() in national or national_id.lower() in doctor_email:
+        if (
+            name.lower() in user.get("full_name", "").lower()
+            or national_id.lower() in user.get("national_id", "").lower()
+            or national_id.lower() in user.get("doctoremail", "").lower()
+        ):
             results.append(user)
 
     return results
