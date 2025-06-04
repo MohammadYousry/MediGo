@@ -15,14 +15,10 @@ def calculate_age(birthdate_str: Optional[Union[str, date]]) -> Optional[int]:
     if not birthdate_str:
         return None
     try:
-        if isinstance(birthdate_str, date):
-            birthdate_dt_obj = birthdate_str
-        else:
-            birthdate_dt_obj = datetime.strptime(birthdate_str, "%Y-%m-%d").date()
-
+        birthdate = birthdate_str if isinstance(birthdate_str, date) else datetime.strptime(birthdate_str, "%Y-%m-%d").date()
         today = date.today()
-        return today.year - birthdate_dt_obj.year - ((today.month, today.day) < (birthdate_dt_obj.month, birthdate_dt_obj.day))
-    except (ValueError, TypeError):
+        return today.year - birthdate.year - ((today.month, today.day) < (birthdate.month, birthdate.day))
+    except Exception:
         return None
 
 # --- Base Models ---
@@ -44,7 +40,7 @@ class UserBase(BaseModel):
     national_id: str
     phone_number: Optional[str] = None
     gender: Optional[str] = None
-    date_of_birth: Optional[date] = None
+    date_of_birth: Optional[Union[str, date]] = None
     address: Optional[str] = None
     city: Optional[str] = None
     region: Optional[str] = None
@@ -69,17 +65,17 @@ class UserUpdate(BaseModel):
     region: Optional[str] = None
     city: Optional[str] = None
     address: Optional[str] = None
-    date_of_birth: Optional[str] = None
+    date_of_birth: Optional[Union[str, date]] = None
     blood_type: Optional[str] = None
     current_smoker: Optional[bool] = None
     cigs_per_day: Optional[int] = None
     doctoremail: Optional[str] = None
 
+
 class UserResponse(UserBase):
     user_id: str = Field(..., alias="national_id")
-    is_active: Optional[bool] = Field(True)
-    class Config:
-        from_attributes = True
+    age: Optional[int] = None
+    is_active: Optional[bool] = True
 
 class UserEmergencyInfo(UserBase):
     age: Optional[int] = None
