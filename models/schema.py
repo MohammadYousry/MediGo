@@ -61,7 +61,7 @@ class UserUpdate(BaseModel):
     region: Optional[str] = None
     city: Optional[str] = None
     address: Optional[str] = None
-    birthdate: Optional[str] = None
+    date_of_birth: Optional[str] = None
     blood_type: Optional[str] = None
     current_smoker: Optional[bool] = None
     cigs_per_day: Optional[int] = None
