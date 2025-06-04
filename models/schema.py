@@ -113,8 +113,10 @@ class Facility(FacilityBase):
         from_attributes = True
 
 # --- QR Code Models ---
-class QRCodeCreate(BaseModel): user_id: str; expiration_date: str
-user_info: Optional[UserEmergencyInfo] = None
+class QRCodeCreate(BaseModel):
+    user_id: str
+    expiration_date: str
+    user_info: Optional[UserEmergencyInfo] = None
 
 class QRCodeResponse(BaseModel):
     user_id: str
@@ -129,9 +131,8 @@ class QRCodeWithUserInfoResponse(BaseModel):
     last_accessed: Optional[str] = None
     expiration_date: Optional[str] = None
     qr_image: Optional[str] = None
-    image_url: Optional[str] = None  # ✅ أضف السطر ده
+    image_url: Optional[str] = None
     user_info: Optional[UserEmergencyInfo] = None
-
 
 # --- Doctor Assignment Models ---
 class DoctorAssignmentBase(BaseModel): patient_national_id: str; doctor_email: EmailStr; assignment_date: Optional[str] = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S")); notes: Optional[str] = None
