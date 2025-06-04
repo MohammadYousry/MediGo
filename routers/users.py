@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from firebase_config import db
 from models.schema import UserCreate, UserUpdate, UserResponse, calculate_age
-from datetime import datetime
+from datetime import datetime, date
 from typing import List
 
 router = APIRouter(prefix="/users", tags=["Users"])
@@ -25,6 +25,8 @@ def create_user(user: UserCreate):
         raise HTTPException(status_code=400, detail="Invalid birthdate format. Use YYYY-MM-DD.")
 
     user_data = {**user.dict(), "age": age}
+    user_data["date_of_birth"] = str(user.date_of_birth)
+
     user_ref.set(user_data)
 
     # ✅ Doctor check and admin notification
@@ -43,7 +45,6 @@ def create_user(user: UserCreate):
               })
 
     print(f"✅ Created user {user.full_name} ({user.national_id})")
-
     return {**user.dict(), "age": age}
 
 # -------------------- Update User --------------------
@@ -62,11 +63,13 @@ async def update_user(national_id: str, updated_user: UserUpdate):
 
     if "date_of_birth" in updates:
         try:
-            birthday_date = datetime.strptime(updates["date_of_birth"], "%Y-%m-%d")
-            age = (datetime.now().date() - birthday_date.date()).days // 365
+            birth = updates["date_of_birth"]
+            birth_date = birth if isinstance(birth, date) else datetime.strptime(birth, "%Y-%m-%d").date()
+            age = (datetime.now().date() - birth_date).days // 365
             if age < 0 or age > 130:
                 raise ValueError("Unrealistic age")
             updates["age"] = age
+            updates["date_of_birth"] = str(birth_date)
         except Exception:
             raise HTTPException(status_code=400, detail="Invalid birthdate format. Use YYYY-MM-DD.")
 
@@ -80,7 +83,10 @@ def get_user(national_id: str):
     user_doc = get_user_ref(national_id).get()
     if not user_doc.exists:
         raise HTTPException(status_code=404, detail="User not found")
-    return user_doc.to_dict()
+    
+    data = user_doc.to_dict()
+    data["user_id"] = national_id
+    return data
 
 # -------------------- Get Users List --------------------
 @router.get("/", response_model=List[UserResponse])
@@ -90,7 +96,7 @@ def get_users(name: str = "", national_id: str = ""):
 
     for doc in users_ref.stream():
         user = doc.to_dict()
-        user["user_id"] = doc.id  # ✅ التأكد من استخدام نفس اسم الحقل في UserResponse
+        user["user_id"] = doc.id
 
         if (
             name.lower() in user.get("full_name", "").lower()
