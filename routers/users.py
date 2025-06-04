@@ -18,7 +18,7 @@ def create_user(user: UserCreate):
         raise HTTPException(status_code=400, detail="User already exists")
 
     try:
-        age = calculate_age(user.birthdate)
+        age = calculate_age(user.date_of_birth)
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid birthdate format. Use YYYY-MM-DD.")
 
