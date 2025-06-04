@@ -19,6 +19,8 @@ def create_user(user: UserCreate):
 
     try:
         age = calculate_age(user.date_of_birth)
+        if age is None or age < 0 or age > 130:
+            raise ValueError("Age out of bounds.")
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid birthdate format. Use YYYY-MM-DD.")
 
@@ -54,10 +56,16 @@ async def update_user(national_id: str, updated_user: UserUpdate):
 
     updates = updated_user.dict(exclude_unset=True)
 
+    # ✅ دعم الاسم القديم للحقل (لو موجود)
+    if "birthdate" in updates and "date_of_birth" not in updates:
+        updates["date_of_birth"] = updates.pop("birthdate")
+
     if "date_of_birth" in updates:
         try:
             birthday_date = datetime.strptime(updates["date_of_birth"], "%Y-%m-%d")
             age = (datetime.now().date() - birthday_date.date()).days // 365
+            if age < 0 or age > 130:
+                raise ValueError("Unrealistic age")
             updates["age"] = age
         except Exception:
             raise HTTPException(status_code=400, detail="Invalid birthdate format. Use YYYY-MM-DD.")
@@ -82,7 +90,7 @@ def get_users(name: str = "", national_id: str = ""):
 
     for doc in users_ref.stream():
         user = doc.to_dict()
-        user["id"] = doc.id
+        user["user_id"] = doc.id  # ✅ التأكد من استخدام نفس اسم الحقل في UserResponse
 
         if (
             name.lower() in user.get("full_name", "").lower()
