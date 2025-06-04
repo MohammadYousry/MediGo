@@ -39,7 +39,7 @@ class UserBase(BaseModel):
     national_id: str = Field(..., description="National ID, must be unique")
     phone_number: Optional[str] = Field(None, description="User's phone number")
     gender: Optional[str] = Field(None, description="Gender (e.g., male, female, other)")
-    date_of_birth: Optional[str] = Field(None, description="Date of birth (YYYY-MM-DD)")
+    date_of_birth: Optional[date] = Field(None, description="Date of birth (YYYY-MM-DD)")
     address: Optional[str] = Field(None, description="Primary address line")
     city: Optional[str] = Field(None, description="City")
     region: Optional[str] = Field(None, description="Region or governorate")
