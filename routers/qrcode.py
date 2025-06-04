@@ -1,22 +1,20 @@
-from fastapi import APIRouter, HTTPException, Form
-from fastapi.responses import FileResponse
-import os
-from firebase_config import db
-from datetime import datetime
-import qrcode
-import firebase_admin
-from firebase_admin import storage
+# qrcode.py
 
+from fastapi import APIRouter, HTTPException, Form
+from datetime import datetime
+import os
+import qrcode
+
+from firebase_config import db, bucket  # ✅ استخدام التهيئة الموحدة
 from models.schema import (
     QRCodeResponse,
     QRCodeWithUserInfoResponse,
-    UserEmergencyInfo,
-    calculate_age
+    UserEmergencyInfo
 )
 
 router = APIRouter(prefix="/qrcode", tags=["QR Codes"])
 
-# 📁 استرجاع المرجع إلى مستند Firestore
+# 📁 مرجع Firestore لمستند QR
 def get_qr_code_doc_ref(user_id: str):
     return db.collection("Users").document(user_id).collection("QRCodeAccess").document("single_qr_code")
 
@@ -28,6 +26,7 @@ def generate_qr_image(user_id: str) -> str:
         os.makedirs(local_folder, exist_ok=True)
         local_file_path = os.path.join(local_folder, f"{user_id}_qrcode.png")
 
+        # ✅ توليد صورة QR
         qr = qrcode.QRCode(
             version=1,
             error_correction=qrcode.constants.ERROR_CORRECT_H,
@@ -39,35 +38,31 @@ def generate_qr_image(user_id: str) -> str:
         img = qr.make_image(fill_color="black", back_color="white")
         img.save(local_file_path)
 
-        # ✅ Ensure Firebase initialized
-        if not firebase_admin._apps:
-            firebase_admin.initialize_app()
-
-        bucket = storage.bucket()
-        if not bucket:
-            raise Exception("Firebase bucket not initialized")
-
+        # ✅ رفع الصورة إلى Firebase
         blob = bucket.blob(f"qr_codes/{user_id}_qrcode.png")
         blob.upload_from_filename(local_file_path)
         blob.make_public()
 
-        # ✅ Optional: Delete local image after upload
-        os.remove(local_file_path)
-
+        os.remove(local_file_path)  # 🧹 تنظيف
         return blob.public_url
 
     except Exception as e:
         print(f"❌ [generate_qr_image] Error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"QR generation failed: {str(e)}")
 
-# 🌐 API Endpoint: إنشاء QR Code وتخزينه
+# 🌐 API - إنشاء QR Code وتخزينه في Firestore
 @router.post("/", response_model=QRCodeResponse)
 async def create_qr_code(
     user_id: str = Form(...),
     expiration_date: str = Form(...)
 ):
     try:
-        # توليد وحفظ صورة QR
+        # ✅ تحقق من أن المستخدم موجود قبل توليد QR
+        user_doc = db.collection("Users").document(user_id).get()
+        if not user_doc.exists:
+            raise HTTPException(status_code=404, detail="User does not exist")
+
+        # 🧠 توليد QR ورفعه
         image_url = generate_qr_image(user_id)
         now_timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
 
@@ -87,11 +82,9 @@ async def create_qr_code(
 
     except Exception as e:
         print(f"❌ [create_qr_code] Error: {str(e)}")
-        import traceback
-        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Error creating QR code: {str(e)}")
 
-# ✅ API Endpoint: استرجاع بيانات المستخدم من QR
+# 🌐 API - استرجاع بيانات المستخدم لصفحة emergency_card
 @router.get("/{user_id}", response_model=QRCodeWithUserInfoResponse)
 def get_user_info_by_qr(user_id: str):
     user_doc = db.collection("Users").document(user_id).get()
@@ -99,7 +92,6 @@ def get_user_info_by_qr(user_id: str):
         raise HTTPException(status_code=404, detail="User not found")
 
     user_info = user_doc.to_dict()
-
     return {
         "user_id": user_id,
         "user_info": user_info
