@@ -95,7 +95,6 @@
         <p class="subtitle">بطاقة طوارئ طبية لخدمة المصابين وفرق الإسعاف في مصر</p>
         <img src="https://upload.wikimedia.org/wikipedia/commons/f/fe/Flag_of_Egypt.svg" alt="علم مصر" class="flag">
 
-        <label for="userIdInput" style="display:none;">الرقم القومي</label>
         <input type="text" id="userIdInput" placeholder="ادخل الرقم القومي للمريض" maxlength="14">
         <button onclick="showCard()">عرض البيانات</button>
 
@@ -104,6 +103,22 @@
     </div>
 
     <script>
+        function getUserIdFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            let userId = urlParams.get("user_id");
+
+            // ✅ لو مش موجود في query، نحاول نجيبه من path
+            if (!userId) {
+                const pathParts = window.location.pathname.split('/');
+                const lastPart = pathParts[pathParts.length - 1];
+                if (/^\d{14}$/.test(lastPart)) {
+                    userId = lastPart;
+                }
+            }
+
+            return userId;
+        }
+
         function showCard() {
             const userId = document.getElementById("userIdInput").value.trim();
             if (!/^\d{14}$/.test(userId)) {
@@ -130,16 +145,14 @@
         }
 
         window.onload = function () {
-            const urlParams = new URLSearchParams(window.location.search);
-            const userId = urlParams.get("user_id");
-
-            if (userId && /^\d{14}$/.test(userId)) {
+            const userId = getUserIdFromUrl();
+            if (userId) {
                 document.getElementById("userIdInput").value = userId;
                 showCard();
             }
         };
 
-        document.getElementById("userIdInput").addEventListener("keydown", function(event) {
+        document.getElementById("userIdInput").addEventListener("keydown", function (event) {
             if (event.key === "Enter") {
                 showCard();
             }
