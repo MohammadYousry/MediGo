@@ -16,20 +16,19 @@ from models.schema import (
 
 router = APIRouter(prefix="/qrcode", tags=["QR Codes"])
 
+# 📁 استرجاع المرجع إلى المستند داخل Firestore
 def get_qr_code_doc_ref(user_id: str):
     return db.collection("Users").document(user_id).collection("QRCodeAccess").document("single_qr_code")
 
-
+# 🧠 توليد صورة QR وحفظها ورفعها على Firebase Storage
 def generate_qr_image(user_id: str) -> str:
     try:
-        # ✅ الرابط الصحيح لصفحة البيانات
-        qr_url = f"https://medigo-eg.netlify.app/card/emergency_card.html?user_id={user_id}"
-
-        # ✅ حفظ الصورة محليًا
+        qr_url = f"https://medigo-eg.netlify.app/{user_id}"
         local_folder = f"./qr_images/{user_id}"
         os.makedirs(local_folder, exist_ok=True)
         local_file_path = os.path.join(local_folder, f"{user_id}_qrcode.png")
 
+        # 🎯 توليد QR Code
         qr = qrcode.QRCode(
             version=1,
             error_correction=qrcode.constants.ERROR_CORRECT_H,
@@ -41,38 +40,40 @@ def generate_qr_image(user_id: str) -> str:
         img = qr.make_image(fill_color="black", back_color="white")
         img.save(local_file_path)
 
-        # ✅ رفع الصورة إلى Firebase Storage
+        # 🔥 تأكد من رفع الصورة على Firebase Storage
         bucket = storage.bucket()
+        print(f"🔥 Bucket name: {bucket.name}")
         blob = bucket.blob(f"qr_codes/{user_id}_qrcode.png")
         blob.upload_from_filename(local_file_path)
         blob.make_public()
 
-        return blob.public_url
+        return blob.public_url  # ✅ يرجع رابط مباشر للصورة
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"QR generation failed: {str(e)}")
 
-
+# 🌐 Endpoint: إنشاء QR Code لمستخدم معين
 @router.post("/", response_model=QRCodeResponse)
 async def create_qr_code(
     user_id: str = Form(...),
     expiration_date: str = Form(...)
 ):
     try:
-        # ✅ استخدم نفس الرابط في كل مكان
-        qr_url = f"https://medigo-eg.netlify.app/card/emergency_card.html?user_id={user_id}"
-        saved_image_path = generate_qr_image(user_id)
+        saved_image_url = generate_qr_image(user_id)
         now_timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+        qr_url = f"https://medigo-eg.netlify.app/{user_id}"  # ✅ نفس الرابط هنا
 
+        # 🗃️ البيانات اللي هتتخزن في Firestore
         qr_data_to_store = {
             "user_id": user_id,
             "last_accessed": now_timestamp,
             "expiration_date": expiration_date,
-            "qr_image": saved_image_path,
+            "qr_image": saved_image_url,
             "qr_data": qr_url,
-            "image_url": qr_url
+            "image_url": saved_image_url
         }
 
+        # 📝 تخزين في Firestore
         get_qr_code_doc_ref(user_id).set(qr_data_to_store)
 
         return QRCodeResponse(**qr_data_to_store)
