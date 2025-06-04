@@ -11,13 +11,13 @@ def resolve_added_by_name(added_by_id: str, db_session) -> Optional[str]:
     print(f"[Placeholder] resolve_added_by_name called for {added_by_id}")
     return "Added By Name (Placeholder)"
 
-def calculate_age(birthdate_str: Optional[str]) -> Optional[int]:
-    if not birthdate_str: return None
+def calculate_age(birthdate_str: Optional[str]) -> int:
     try:
         birthdate_dt_obj = datetime.strptime(birthdate_str, "%Y-%m-%d").date()
         today = date.today()
         return today.year - birthdate_dt_obj.year - ((today.month, today.day) < (birthdate_dt_obj.month, birthdate_dt_obj.day))
-    except (ValueError, TypeError): return None
+    except (ValueError, TypeError):
+        return -1
 
 # --- Base Models ---
 class BaseInput(BaseModel):
@@ -28,30 +28,32 @@ class BaseRecord(BaseInput):
     patient_name: Optional[str] = None
     added_by_name: Optional[str] = None
     entry_date: Optional[str] = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-    
-    class Config: # Corrected Indentation
+    class Config:
         from_attributes = True
 
 # --- User Models ---
 class UserBase(BaseModel):
-    email: Optional[EmailStr] = Field(None, description="User's email address") # <-- ضفنا Optional و None
-    full_name: Optional[str] = Field(None, description="User's full name")
-    national_id: str = Field(..., description="National ID, must be unique")
-    phone_number: Optional[str] = Field(None, description="User's phone number")
-    gender: Optional[str] = Field(None, description="Gender (e.g., male, female, other)")
-    date_of_birth: Optional[date] = Field(None, description="Date of birth (YYYY-MM-DD)")
-    address: Optional[str] = Field(None, description="Primary address line")
-    city: Optional[str] = Field(None, description="City")
-    region: Optional[str] = Field(None, description="Region or governorate")
-    blood_type: Optional[str] = Field(None, description="Blood type (e.g., A+, O-)")
-    profile_picture_url: Optional[str] = Field(None, description="URL to profile picture")
-    emergency_contacts: Optional[List[Dict[str, Any]]] = Field(default_factory=list, description="List of emergency contacts")
-    allergies: Optional[List[Dict[str, Any]]] = Field(default_factory=list, description="List of allergies")
-    chronic_diseases: Optional[List[str]] = Field(default_factory=list, description="List of chronic diseases")
-    medications: Optional[List[Dict[str, Any]]] = Field(default_factory=list, description="List of current medications")
+    email: Optional[EmailStr] = None
+    full_name: Optional[str] = None
+    national_id: str
+    phone_number: Optional[str] = None
+    gender: Optional[str] = None
+    date_of_birth: Optional[date] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    region: Optional[str] = None
+    blood_type: Optional[str] = None
+    profile_picture_url: Optional[str] = None
+    emergency_contacts: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
+    allergies: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
+    chronic_diseases: Optional[List[str]] = Field(default_factory=list)
+    medications: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
 
 class UserCreate(UserBase):
-    password: str = Field(..., min_length=8, description="User password")
+    password: str = Field(..., min_length=8)
+    doctoremail: Optional[str] = None
+    current_smoker: Optional[bool] = None
+    cigs_per_day: Optional[int] = None
 
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
@@ -68,15 +70,13 @@ class UserUpdate(BaseModel):
     doctoremail: Optional[str] = None
 
 class UserResponse(UserBase):
-    user_id: str = Field(..., description="Unique user identifier (often same as national_id or a UUID)")
-    is_active: Optional[bool] = Field(True, description="User account status")
-    
-    class Config: # Corrected Indentation
+    user_id: str = Field(..., alias="national_id")
+    is_active: Optional[bool] = Field(True)
+    class Config:
         from_attributes = True
 
 class UserEmergencyInfo(UserBase):
-    age: Optional[int] = Field(None, description="Calculated age of the user")
-
+    age: Optional[int] = None
 # --- Doctor Specific Models ---
 class DoctorsBase(UserBase):
     specialization: Optional[str] = Field(None, description="Doctor's specialization")
