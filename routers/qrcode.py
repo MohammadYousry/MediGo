@@ -22,12 +22,14 @@ def get_qr_code_doc_ref(user_id: str):
 
 def generate_qr_image(user_id: str) -> str:
     try:
-        qr_url = f"https://medigo-eg.netlify.app/{user_id}"
+        # ✅ الرابط الصحيح لصفحة البيانات
+        qr_url = f"https://medigo-eg.netlify.app/card/emergency_card.html?user_id={user_id}"
+
+        # ✅ حفظ الصورة محليًا
         local_folder = f"./qr_images/{user_id}"
         os.makedirs(local_folder, exist_ok=True)
         local_file_path = os.path.join(local_folder, f"{user_id}_qrcode.png")
 
-        # توليد QR
         qr = qrcode.QRCode(
             version=1,
             error_correction=qrcode.constants.ERROR_CORRECT_H,
@@ -39,13 +41,13 @@ def generate_qr_image(user_id: str) -> str:
         img = qr.make_image(fill_color="black", back_color="white")
         img.save(local_file_path)
 
-        # ✅ رفع على Firebase Storage
+        # ✅ رفع الصورة إلى Firebase Storage
         bucket = storage.bucket()
         blob = bucket.blob(f"qr_codes/{user_id}_qrcode.png")
         blob.upload_from_filename(local_file_path)
         blob.make_public()
 
-        return blob.public_url  # يرجع رابط مباشر للصورة
+        return blob.public_url
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"QR generation failed: {str(e)}")
@@ -57,9 +59,10 @@ async def create_qr_code(
     expiration_date: str = Form(...)
 ):
     try:
+        # ✅ استخدم نفس الرابط في كل مكان
+        qr_url = f"https://medigo-eg.netlify.app/card/emergency_card.html?user_id={user_id}"
         saved_image_path = generate_qr_image(user_id)
         now_timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-        qr_url = f"https://medigo-eg.netlify.app/{user_id}"  # ✅ نفس الرابط هنا
 
         qr_data_to_store = {
             "user_id": user_id,
@@ -73,6 +76,7 @@ async def create_qr_code(
         get_qr_code_doc_ref(user_id).set(qr_data_to_store)
 
         return QRCodeResponse(**qr_data_to_store)
+
     except Exception as e:
         print(f"❌ [create_qr_code] Error: {str(e)}")
         import traceback
