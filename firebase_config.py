@@ -5,8 +5,9 @@ from firebase_admin import credentials, firestore, storage
 if not firebase_admin._apps:
     cred = credentials.Certificate("/etc/secrets/firebase_key.json")  # أو المسار الصحيح
     firebase_admin.initialize_app(cred, {
-        'storageBucket': 'medi-go-eb65e.appspot.com'
+        'storageBucket': 'medi-go-eb65e.firebasestorage.app'
     })
+
 
 # ✅ بعد التهيئة نقدر نستخدمهم بأمان
 db = firestore.client()
