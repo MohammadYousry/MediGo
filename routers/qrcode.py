@@ -28,7 +28,6 @@ def generate_qr_image(user_id: str) -> str:
         os.makedirs(local_folder, exist_ok=True)
         local_file_path = os.path.join(local_folder, f"{user_id}_qrcode.png")
 
-        # 🎯 توليد QR Code
         qr = qrcode.QRCode(
             version=1,
             error_correction=qrcode.constants.ERROR_CORRECT_H,
@@ -40,7 +39,10 @@ def generate_qr_image(user_id: str) -> str:
         img = qr.make_image(fill_color="black", back_color="white")
         img.save(local_file_path)
 
-        # 🔥 رفع إلى Firebase Storage
+        # ✅ Ensure Firebase initialized
+        if not firebase_admin._apps:
+            firebase_admin.initialize_app()
+
         bucket = storage.bucket()
         if not bucket:
             raise Exception("Firebase bucket not initialized")
@@ -48,6 +50,9 @@ def generate_qr_image(user_id: str) -> str:
         blob = bucket.blob(f"qr_codes/{user_id}_qrcode.png")
         blob.upload_from_filename(local_file_path)
         blob.make_public()
+
+        # ✅ Optional: Delete local image after upload
+        os.remove(local_file_path)
 
         return blob.public_url
 
