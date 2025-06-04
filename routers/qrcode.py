@@ -77,9 +77,9 @@ async def create_qr_code(
             "user_id": user_id,
             "last_accessed": now_timestamp,
             "expiration_date": expiration_date,
-            "qr_image": image_url,  # رابط الصورة في Firebase
-            "qr_data": web_url,     # الداتا الموجودة داخل QR
-            "image_url": image_url  # للعرض في الواجهة
+            "qr_image": image_url,
+            "qr_data": web_url,
+            "image_url": image_url
         }
 
         get_qr_code_doc_ref(user_id).set(qr_data_to_store)
@@ -90,3 +90,17 @@ async def create_qr_code(
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Error creating QR code: {str(e)}")
+
+# ✅ API Endpoint: استرجاع بيانات المستخدم من QR
+@router.get("/{user_id}", response_model=QRCodeWithUserInfoResponse)
+def get_user_info_by_qr(user_id: str):
+    user_doc = db.collection("Users").document(user_id).get()
+    if not user_doc.exists:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user_info = user_doc.to_dict()
+
+    return {
+        "user_id": user_id,
+        "user_info": user_info
+    }
