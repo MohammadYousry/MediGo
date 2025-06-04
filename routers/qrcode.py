@@ -84,34 +84,25 @@ def get_user_info_by_qr(user_id: str):
     if not user_doc.exists:
         raise HTTPException(status_code=404, detail="User not found")
 
-    user_info = user_doc.to_dict()
+    user_data = user_doc.to_dict()
 
-    try:
-        # ✅ ClinicalIndicators -> bloodbiomarkers
-        clinical_ref = db.collection("Users").document(user_id).collection("ClinicalIndicators")
-        biomarkers_doc = clinical_ref.document("bloodbiomarkers").get()
-        user_info["biomarkers"] = biomarkers_doc.to_dict().get("results", []) if biomarkers_doc.exists else []
+    # 📌 اجلب العمليات الجراحية
+    surgeries = [surgery.to_dict() for surgery in db.collection("Users").document(user_id).collection("surgeries").stream()]
+    user_data["surgeries"] = surgeries
 
-        # ✅ Hypertension
-        hypertension_doc = clinical_ref.document("hypertension").get()
-        user_info["hypertension_stage"] = hypertension_doc.to_dict().get("stage_name") if hypertension_doc.exists else None
+    # 📌 اجلب تحاليل الدم
+    biomarkers = [b.to_dict() for b in db.collection("Users").document(user_id).collection("bloodbiomarkers").stream()]
+    user_data["biomarkers"] = biomarkers
 
-        # ✅ Surgeries
-        surgeries_ref = db.collection("Users").document(user_id).collection("surgeries").stream()
-        user_info["surgeries"] = [doc.to_dict() for doc in surgeries_ref]
+    # 📌 اجلب الأشعة
+    radiology = [r.to_dict() for r in db.collection("Users").document(user_id).collection("radiology").stream()]
+    user_data["radiology"] = radiology
 
-        # ✅ Radiology
-        radiology_ref = db.collection("Users").document(user_id).collection("radiology").stream()
-        user_info["radiology"] = [doc.to_dict() for doc in radiology_ref]
-
-        # ✅ Emergency Contacts
-        contacts_ref = db.collection("Users").document(user_id).collection("emergency_contacts").stream()
-        user_info["emergency_contacts"] = [doc.to_dict() for doc in contacts_ref]
-
-    except Exception as e:
-        print(f"⚠️ Error fetching subcollections for {user_id}: {str(e)}")
+    # 📌 اجلب الطوارئ
+    contacts = [c.to_dict() for c in db.collection("Users").document(user_id).collection("emergency_contacts").stream()]
+    user_data["emergency_contacts"] = contacts
 
     return {
         "user_id": user_id,
-        "user_info": user_info
+        "user_info": user_data
     }
