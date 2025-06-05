@@ -277,6 +277,7 @@ class DerivedFeatures(BaseModel): bmi: Optional[float] = None; age_group: Option
 class TopFeatures(BaseModel):
     feature_name: str
     contribution_score: float
+    disease_type: str  # ✅ أضف هذا السطر لتجنب الخطأ 500
 
 class RiskPredictionInput(BaseModel): age: Optional[int] = None; gender: Optional[str] = None; systolic_bp: Optional[float] = None; diastolic_bp: Optional[float] = None; cholesterol_total: Optional[float] = None; hdl_cholesterol: Optional[float] = None; ldl_cholesterol: Optional[float] = None; triglycerides: Optional[float] = None; glucose_level: Optional[float] = None; has_diabetes_history: Optional[bool] = None; is_smoker: Optional[bool] = None; physical_activity_level: Optional[str] = None
 class RiskPredictionOutput(BaseModel): risk_score: Optional[float] = None; risk_level: Optional[str] = None; prediction_date: str = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S")); model_version: Optional[str] = None; recommendations: Optional[List[str]] = Field(default_factory=list); confidence_interval: Optional[Dict[str, float]] = None
