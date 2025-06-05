@@ -164,7 +164,7 @@ class BloodBiomarkerInput(BaseInput):
     test_date: str = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d"))
     test_type: str
     results: List[TestResultItem]
-    added_by: str  # ✅ أضف السطر ده هنا
+    added_by: str  # ⬅️ أضفته فعلاً كويس ✅
 class BloodBioMarker(BloodBiomarkerInput, BaseRecord): # BaseRecord already has Config
     pass
 
@@ -274,6 +274,9 @@ class AdminUser(UserResponse): # UserResponse already has Config
 # --- RiskAssessment Models ---
 class FeatureImportance(BaseModel): feature: str; importance: float
 class DerivedFeatures(BaseModel): bmi: Optional[float] = None; age_group: Optional[str] = None
-class TopFeatures(BaseModel): disease_type: str; top_positive_contributors: List[FeatureImportance] = Field(default_factory=list); top_negative_contributors: List[FeatureImportance] = Field(default_factory=list)
+class TopFeatures(BaseModel):
+    disease_type: str  # ⬅️ ضروري علشان الرسالة كانت واضحة إنه ناقص
+    top_positive_contributors: List[FeatureImportance] = Field(default_factory=list)
+    top_negative_contributors: List[FeatureImportance] = Field(default_factory=list)
 class RiskPredictionInput(BaseModel): age: Optional[int] = None; gender: Optional[str] = None; systolic_bp: Optional[float] = None; diastolic_bp: Optional[float] = None; cholesterol_total: Optional[float] = None; hdl_cholesterol: Optional[float] = None; ldl_cholesterol: Optional[float] = None; triglycerides: Optional[float] = None; glucose_level: Optional[float] = None; has_diabetes_history: Optional[bool] = None; is_smoker: Optional[bool] = None; physical_activity_level: Optional[str] = None
 class RiskPredictionOutput(BaseModel): risk_score: Optional[float] = None; risk_level: Optional[str] = None; prediction_date: str = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S")); model_version: Optional[str] = None; recommendations: Optional[List[str]] = Field(default_factory=list); confidence_interval: Optional[Dict[str, float]] = None
