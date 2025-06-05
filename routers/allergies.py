@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Request
 from models.schema import Allergy
 from datetime import datetime
 from firebase_config import db
+from uuid import uuid4
 import pytz
 
 router = APIRouter(prefix="/allergies", tags=["Allergies"])
@@ -18,7 +19,7 @@ def add_allergy(national_id: str, entry: Allergy):
 
     data = entry.dict()
     data["date"] = timestamp_id
-    data["added_by"] = entry.added_by  # ✅ مهم لتحديث/حذف لاحقًا
+    data["added_by"] = entry.added_by
 
     user_ref \
         .collection("ClinicalIndicators") \
@@ -44,6 +45,7 @@ def get_allergies(national_id: str):
 
     return [{**doc.to_dict(), "id": doc.id} for doc in docs]
 
+
 @router.put("/{national_id}/{record_id}")
 def update_allergy(national_id: str, record_id: str, entry: Allergy):
     allergy_ref = db.collection("Users") \
@@ -66,6 +68,7 @@ def update_allergy(national_id: str, record_id: str, entry: Allergy):
     allergy_ref.update(updated_data)
 
     return {"message": "Allergy updated", "id": record_id}
+
 
 @router.delete("/{national_id}/{record_id}")
 def delete_allergy(national_id: str, record_id: str, request: Request):
