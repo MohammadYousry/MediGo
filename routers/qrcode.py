@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Form
 from datetime import datetime
 import os
 import qrcode
-
+from firebase_admin import firestore
 from firebase_config import db, bucket
 from models.schema import (
     QRCodeResponse,
