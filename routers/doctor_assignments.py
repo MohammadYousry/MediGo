@@ -131,3 +131,22 @@ def get_patients_for_doctor(doctor_email: str):
         patients += [doc.to_dict() for doc in assigned]
 
     return patients
+# 📌 Simple helper to get assigned doctor email if registered or in fallback
+def is_doctor_assigned(national_id: str) -> Optional[str]:
+    doc_ref = db.collection("DoctorAssignments") \
+        .where("patient_national_id", "==", national_id) \
+        .limit(1).stream()
+    for doc in doc_ref:
+        return doc.to_dict().get("doctor_email")
+
+    # Check inside registered doctors
+    doctors = db.collection("Doctors").stream()
+    for doctor in doctors:
+        assigned_doc = db.collection("Doctors") \
+            .document(doctor.id) \
+            .collection("AssignedPatients") \
+            .document(national_id).get()
+        if assigned_doc.exists:
+            return doctor.id
+
+    return None
