@@ -290,11 +290,29 @@ class AdminUser(UserResponse): # UserResponse already has Config
 
 # --- RiskAssessment Models ---
 class FeatureImportance(BaseModel): feature: str; importance: float
-class DerivedFeatures(BaseModel): bmi: Optional[float] = None; age_group: Optional[str] = None
+class DerivedFeatures(BaseModel):
+    age_group: Optional[str]
+    smoker_status: Optional[str]
+    is_obese: Optional[bool]
+    bp_category: Optional[str]
+    bmi_category: Optional[str]
+    bmi: Optional[float]
+    pulse_pressure: Optional[float]
+    male_smoker: Optional[bool]
+    prediabetes_indicator: Optional[bool]
+    insulin_resistance: Optional[bool]
+    metabolic_syndrome: Optional[bool]
+
 class TopFeatures(BaseModel):
     feature_name: str
     contribution_score: float
-    disease_type: str  # ✅ أضف هذا السطر لتجنب الخطأ 500
+    disease_type: Optional[str] = None  # optional to allow flexibility
 
 class RiskPredictionInput(BaseModel): age: Optional[int] = None; gender: Optional[str] = None; systolic_bp: Optional[float] = None; diastolic_bp: Optional[float] = None; cholesterol_total: Optional[float] = None; hdl_cholesterol: Optional[float] = None; ldl_cholesterol: Optional[float] = None; triglycerides: Optional[float] = None; glucose_level: Optional[float] = None; has_diabetes_history: Optional[bool] = None; is_smoker: Optional[bool] = None; physical_activity_level: Optional[str] = None
-class RiskPredictionOutput(BaseModel): risk_score: Optional[float] = None; risk_level: Optional[str] = None; prediction_date: str = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S")); model_version: Optional[str] = None; recommendations: Optional[List[str]] = Field(default_factory=list); confidence_interval: Optional[Dict[str, float]] = None
+class RiskPredictionOutput(BaseModel):
+    diabetes_risk: float  # نسبة مئوية
+    hypertension_risk: float  # نسبة مئوية
+    derived_features: DerivedFeatures
+    input_values: Dict[str, Any]
+    top_diabetes_features: List[TopFeatures]
+    top_hypertension_features: List[TopFeatures]
