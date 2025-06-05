@@ -137,7 +137,11 @@ class QRCodeWithUserInfoResponse(BaseModel):
     user_info: Optional[UserEmergencyInfo] = None
 
 # --- Doctor Assignment Models ---
-class DoctorAssignmentBase(BaseModel): patient_national_id: str; doctor_email: EmailStr; assignment_date: Optional[str] = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S")); notes: Optional[str] = None
+class DoctorAssignmentBase(BaseModel):
+    patient_national_id: str
+    doctor_email: EmailStr
+    assignment_date: Optional[str] = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    notes: Optional[str] = None
 class DoctorAssignmentCreate(DoctorAssignmentBase): pass
 class DoctorAssignment(DoctorAssignmentBase):
     assignment_id: str = Field(...)
