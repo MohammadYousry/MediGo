@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from models.schema import EmergencyContact
 from firebase_config import db
 from datetime import datetime
@@ -36,11 +36,16 @@ def get_contacts(national_id: str):
 # ---------------------- Update Emergency Contact ----------------------
 @router.put("/{national_id}/{record_id}")
 def update_contact(national_id: str, record_id: str, entry: EmergencyContact):
-    user_ref = db.collection("Users").document(national_id)
-    record_ref = user_ref.collection("emergency_contacts").document(record_id)
+    record_ref = db.collection("Users").document(national_id) \
+        .collection("emergency_contacts").document(record_id)
 
-    if not record_ref.get().exists:
+    existing_doc = record_ref.get()
+    if not existing_doc.exists:
         raise HTTPException(status_code=404, detail="Record not found")
+
+    # 🔐 Check if added_by matches
+    if existing_doc.to_dict().get("added_by") != entry.added_by:
+        raise HTTPException(status_code=403, detail="You are not authorized to update this contact.")
 
     data = entry.dict()
     data["id"] = record_id
@@ -52,12 +57,19 @@ def update_contact(national_id: str, record_id: str, entry: EmergencyContact):
 
 # ---------------------- Delete Emergency Contact ----------------------
 @router.delete("/{national_id}/{record_id}")
-def delete_contact(national_id: str, record_id: str):
-    user_ref = db.collection("Users").document(national_id)
-    record_ref = user_ref.collection("emergency_contacts").document(record_id)
+def delete_contact(national_id: str, record_id: str, request: Request):
+    added_by = request.query_params.get("added_by")
 
-    if not record_ref.get().exists:
+    record_ref = db.collection("Users").document(national_id) \
+        .collection("emergency_contacts").document(record_id)
+
+    doc = record_ref.get()
+    if not doc.exists:
         raise HTTPException(status_code=404, detail="Record not found")
 
+    # 🔐 Validate ownership
+    if doc.to_dict().get("added_by") != added_by:
+        raise HTTPException(status_code=403, detail="You are not authorized to delete this contact.")
+
     record_ref.delete()
-    return {"message": "Emergency contact deleted"}
+    return {"message": "Emergency contact deleted", "record_id": record_id}
