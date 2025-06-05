@@ -230,8 +230,17 @@ class MedicationEntry(BaseModel):
 # --- Diagnosis Models ---
 class DiagnosisBase(BaseInput): diagnosis_code: Optional[str] = None; diagnosis_description: str; diagnosis_date: str = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d")); status: Optional[str] = None
 class DiagnosisCreate(DiagnosisBase): pass
-class DiagnosisEntry(DiagnosisBase, BaseRecord): # BaseRecord already has Config
-    pass
+class DiagnosisEntry(BaseModel):
+    notes: str
+    record_id: str
+    patient_name: str
+    added_by_name: str
+    entry_date: str
+    diagnosis_code: str
+    diagnosis_description: str
+    diagnosis_date: str  # still string, will be parsed manually
+    status: str
+
 
 # --- Allergy Models ---
 class AllergyBase(BaseInput): allergen: str; reaction: Optional[str] = None; severity: Optional[str] = None; onset_date: Optional[str] = None
