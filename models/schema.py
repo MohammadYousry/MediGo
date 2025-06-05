@@ -142,12 +142,15 @@ class DoctorAssignmentBase(BaseModel):
     doctor_email: EmailStr
     assignment_date: Optional[str] = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     notes: Optional[str] = None
+
 class DoctorAssignmentCreate(DoctorAssignmentBase): pass
+
 class DoctorAssignment(DoctorAssignmentBase):
     assignment_id: str = Field(...)
     
-    class Config: # Corrected Indentation
+    class Config:
         from_attributes = True
+
 
 # --- Surgery Models ---
 class SurgeryBase(BaseInput): surgery_name: str; surgery_date: str; hospital_name: Optional[str] = None; doctor_name: Optional[str] = None
