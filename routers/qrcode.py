@@ -91,20 +91,21 @@ def get_user_info_by_qr(user_id: str):
         doc.to_dict() for doc in db.collection("Users").document(user_id).collection("surgeries").stream()
     ]
 
-    # ✅ اجلب التحاليل من مكانها الصحيح (داخل ClinicalIndicators)
+    # ✅ اجلب التحاليل (biomarkers)
     user_data["biomarkers"] = [
         doc.to_dict() for doc in db.collection("Users").document(user_id)
         .collection("ClinicalIndicators").document("bloodbiomarkers")
         .collection("Records").stream()
     ]
 
-    # ✅ اجلب بيانات ضغط الدم (المرحلة)
+    # ✅ اجلب بيانات ضغط الدم
     bp_docs = list(db.collection("Users").document(user_id)
         .collection("ClinicalIndicators").document("Hypertension")
         .collection("Records").order_by("timestamp", direction=firestore.Query.DESCENDING).limit(1).stream())
+    user_data["hypertension_stage"] = None
     if bp_docs:
         latest_bp = bp_docs[0].to_dict()
-        user_data["hypertension_stage"] = latest_bp.get("stage_name", "غير متوفر")
+        user_data["hypertension_stage"] = latest_bp.get("stage_name") or latest_bp.get("bp_category", "غير متوفر")
 
     # ✅ اجلب الأشعة
     user_data["radiology"] = [
@@ -121,15 +122,19 @@ def get_user_info_by_qr(user_id: str):
         doc.to_dict() for doc in db.collection("Users").document(user_id).collection("medications").stream()
     ]
 
-    # ✅ اجلب الأمراض المزمنة من الحقل الرئيسي (قائمة)
+    # ✅ الأمراض المزمنة
     user_data["chronic_diseases"] = user_data.get("chronic_diseases", [])
 
-    # ✅ اجلب جهات اتصال الطوارئ
+    # ✅ جهات اتصال الطوارئ
     user_data["emergency_contacts"] = [
         doc.to_dict() for doc in db.collection("Users").document(user_id).collection("emergency_contacts").stream()
     ]
+
+    # ✅ رابط الصورة الشخصية لو موجود
+    user_data["image_url"] = user_data.get("profile_picture_url")
 
     return {
         "user_id": user_id,
         "user_info": user_data
     }
+
