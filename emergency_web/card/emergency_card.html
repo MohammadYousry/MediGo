@@ -138,10 +138,22 @@
         const user = data.user_info;
 
         const profile = document.getElementById('profile_photo');
-        profile.src = user.profile_photo || user.profile_image || "https://medigo-eg.netlify.app/medi_go_logo.png";
-        profile.onerror = () => {
+        const imageUrl = user.profile_photo || user.profile_image;
+
+        if (imageUrl) {
+          const testImage = new Image();
+          testImage.onload = () => {
+            profile.src = imageUrl;
+          };
+          testImage.onerror = () => {
+            profile.src = "https://medigo-eg.netlify.app/medi_go_logo.png";
+          };
+          testImage.src = imageUrl;
+        } else {
           profile.src = "https://medigo-eg.netlify.app/medi_go_logo.png";
-        };
+        }
+
+
 
         document.getElementById('full_name').textContent = user.full_name || 'غير متوفر';
         document.getElementById('age').textContent = user.age || 'غير متوفر';
