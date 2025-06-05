@@ -61,8 +61,7 @@ def update_diagnosis(national_id: str, record_id: str, entry: DiagnosisEntry):
 # ---------------------- Delete Diagnosis ----------------------
 @router.delete("/{national_id}/{record_id}")
 def delete_diagnosis(national_id: str, record_id: str, added_by: str):
-    user_ref = db.collection("Users").document(national_id)
-    record_ref = user_ref.collection("diagnoses").document(record_id)
+    record_ref = db.collection("Users").document(national_id).collection("diagnoses").document(record_id)
     doc = record_ref.get()
 
     if not doc.exists:
@@ -73,3 +72,4 @@ def delete_diagnosis(national_id: str, record_id: str, added_by: str):
 
     record_ref.delete()
     return {"message": "Diagnosis deleted", "record_id": record_id}
+
