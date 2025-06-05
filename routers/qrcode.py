@@ -86,21 +86,48 @@ def get_user_info_by_qr(user_id: str):
 
     user_data = user_doc.to_dict()
 
-    # 📌 اجلب العمليات الجراحية
-    surgeries = [surgery.to_dict() for surgery in db.collection("Users").document(user_id).collection("surgeries").stream()]
-    user_data["surgeries"] = surgeries
+    # ✅ اجلب العمليات الجراحية
+    user_data["surgeries"] = [
+        doc.to_dict() for doc in db.collection("Users").document(user_id).collection("surgeries").stream()
+    ]
 
-    # 📌 اجلب تحاليل الدم
-    biomarkers = [b.to_dict() for b in db.collection("Users").document(user_id).collection("bloodbiomarkers").stream()]
-    user_data["biomarkers"] = biomarkers
+    # ✅ اجلب التحاليل من مكانها الصحيح (داخل ClinicalIndicators)
+    user_data["biomarkers"] = [
+        doc.to_dict() for doc in db.collection("Users").document(user_id)
+        .collection("ClinicalIndicators").document("bloodbiomarkers")
+        .collection("Records").stream()
+    ]
 
-    # 📌 اجلب الأشعة
-    radiology = [r.to_dict() for r in db.collection("Users").document(user_id).collection("radiology").stream()]
-    user_data["radiology"] = radiology
+    # ✅ اجلب بيانات ضغط الدم (المرحلة)
+    bp_docs = list(db.collection("Users").document(user_id)
+        .collection("ClinicalIndicators").document("Hypertension")
+        .collection("Records").order_by("timestamp", direction=firestore.Query.DESCENDING).limit(1).stream())
+    if bp_docs:
+        latest_bp = bp_docs[0].to_dict()
+        user_data["hypertension_stage"] = latest_bp.get("stage_name", "غير متوفر")
 
-    # 📌 اجلب الطوارئ
-    contacts = [c.to_dict() for c in db.collection("Users").document(user_id).collection("emergency_contacts").stream()]
-    user_data["emergency_contacts"] = contacts
+    # ✅ اجلب الأشعة
+    user_data["radiology"] = [
+        doc.to_dict() for doc in db.collection("Users").document(user_id).collection("radiology").stream()
+    ]
+
+    # ✅ اجلب الحساسية
+    user_data["allergies"] = [
+        doc.to_dict() for doc in db.collection("Users").document(user_id).collection("allergies").stream()
+    ]
+
+    # ✅ اجلب الأدوية
+    user_data["medications"] = [
+        doc.to_dict() for doc in db.collection("Users").document(user_id).collection("medications").stream()
+    ]
+
+    # ✅ اجلب الأمراض المزمنة من الحقل الرئيسي (قائمة)
+    user_data["chronic_diseases"] = user_data.get("chronic_diseases", [])
+
+    # ✅ اجلب جهات اتصال الطوارئ
+    user_data["emergency_contacts"] = [
+        doc.to_dict() for doc in db.collection("Users").document(user_id).collection("emergency_contacts").stream()
+    ]
 
     return {
         "user_id": user_id,
