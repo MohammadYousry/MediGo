@@ -20,7 +20,8 @@ def add_diagnosis(national_id: str, entry: DiagnosisEntry):
     timestamp = datetime.now(egypt_tz).strftime("%Y-%m-%d %H:%M:%S")
 
     data = entry.dict()
-    data["diagnosis_date"] = entry.diagnosis_date.strftime("%Y-%m-%d")
+    dt = datetime.strptime(entry.diagnosis_date, "%Y-%m-%d")
+    data["diagnosis_date"] = dt.strftime("%Y-%m-%d")
     data["timestamp"] = timestamp
     data["id"] = record_id
     data["user_id"] = national_id
@@ -54,7 +55,8 @@ def update_diagnosis(national_id: str, record_id: str, entry: DiagnosisEntry):
         raise HTTPException(status_code=403, detail="You are not authorized to update this diagnosis.")
 
     data = entry.dict()
-    data["diagnosis_date"] = entry.diagnosis_date.strftime("%Y-%m-%d")
+    dt = datetime.strptime(entry.diagnosis_date, "%Y-%m-%d")
+    data["diagnosis_date"] = dt.strftime("%Y-%m-%d")
     data["timestamp"] = doc.to_dict().get("timestamp")  # Preserve original timestamp
     data["id"] = record_id
     data["user_id"] = national_id
