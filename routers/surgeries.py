@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from models.schema import SurgeryEntry
 from firebase_config import db
 from datetime import datetime, date as dt_date
@@ -6,7 +6,6 @@ import pytz
 
 router = APIRouter(prefix="/surgeries", tags=["Surgeries"])
 egypt_tz = pytz.timezone("Africa/Cairo")
-
 
 # ---------------------- Add Surgery ----------------------
 @router.post("/{national_id}")
@@ -67,7 +66,9 @@ def update_surgery(national_id: str, record_id: str, entry: SurgeryEntry):
 
 # ---------------------- Delete Surgery ----------------------
 @router.delete("/{national_id}/{record_id}")
-def delete_surgery(national_id: str, record_id: str, added_by: str):
+def delete_surgery(national_id: str, record_id: str, request: Request):
+    added_by = request.query_params.get("added_by")
+
     user_ref = db.collection("Users").document(national_id)
     record_ref = user_ref.collection("surgeries").document(record_id)
     doc = record_ref.get()
@@ -79,4 +80,4 @@ def delete_surgery(national_id: str, record_id: str, added_by: str):
         raise HTTPException(status_code=403, detail="You are not authorized to delete this record.")
 
     record_ref.delete()
-    return {"message": "Surgery entry deleted"}
+    return {"message": "Surgery entry deleted", "record_id": record_id}
