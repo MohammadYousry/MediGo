@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -136,14 +137,12 @@
         const data = await response.json();
         const user = data.user_info;
 
-        // ✅ الصورة
         const profile = document.getElementById('profile_photo');
-        profile.src = user.profile_photo || "https://medigo-eg.netlify.app/medi_go_logo.png";
+        profile.src = user.profile_photo || user.profile_image || "https://medigo-eg.netlify.app/medi_go_logo.png";
         profile.onerror = () => {
           profile.src = "https://medigo-eg.netlify.app/medi_go_logo.png";
         };
 
-        // ✅ بيانات أساسية
         document.getElementById('full_name').textContent = user.full_name || 'غير متوفر';
         document.getElementById('age').textContent = user.age || 'غير متوفر';
         document.getElementById('gender').textContent = user.gender || 'غير متوفر';
@@ -152,7 +151,6 @@
         document.getElementById('phone_number').textContent = user.phone_number || 'غير متوفر';
         document.getElementById('address').textContent = [user.address, user.city, user.region].filter(Boolean).join(', ') || 'غير متوفر';
 
-        // ✅ البيانات المتعددة
         const renderList = (id, items, format) => {
           const el = document.getElementById(id);
           if (items?.length) {
@@ -163,15 +161,13 @@
 
         renderList("chronic_diseases_list", user.chronic_diseases, d => `<span class="pill">${d}</span>`);
         renderList("medications_list", user.medications, m => `<span class="pill">${m.name} (${m.dosage || ''}, ${m.frequency || ''})</span>`);
-        renderList("allergies_list", user.allergies, a => `<span class="pill">${a.allergen} - ${a.reaction || ''}</span>`);
+        renderList("allergies_list", user.allergies, a => `<span class="pill">${a.allergen} (${a.reaction || 'بدون رد فعل'}, ${a.severity || 'غير معروف'})</span>`);
         renderList("biomarkers_list", user.biomarkers, b => `<span class="pill">${b.test_name}: ${b.value} ${b.unit || ''}</span>`);
         renderList("surgeries_list", user.surgeries, s => `<span class="pill">${s.name || 'عملية'} - ${s.date || ''}</span>`);
         renderList("radiology_list", user.radiology, r => `<span class="pill">${r.test_type || 'نوع'} - ${r.result || ''}</span>`);
 
-        // ✅ ضغط الدم
         document.getElementById('bp_stage').textContent = user.hypertension_stage || 'غير متوفر';
 
-        // ✅ جهات الطوارئ
         const contactContainer = document.getElementById('emergency_contacts_list');
         if (user.emergency_contacts?.length) {
           contactContainer.classList.remove('empty');
