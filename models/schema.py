@@ -196,10 +196,36 @@ class HypertensionEntry(HypertensionBase, BaseRecord): # BaseRecord already has 
     pass
 
 # --- Medication Models ---
-class MedicationBase(BaseInput): name: str; dosage: Optional[str] = None; frequency: Optional[str] = None; start_date: Optional[str] = None; end_date: Optional[str] = None; reason: Optional[str] = None
-class MedicationCreate(MedicationBase): pass
-class MedicationEntry(MedicationBase, BaseRecord): # BaseRecord already has Config
+class MedicationBase(BaseInput):
+    name: str
+    dosage: Optional[str] = None
+    frequency: Optional[str] = None
+    start_date: Optional[str] = None  # تاريخ بداية العلاج
+    end_date: Optional[str] = None    # تاريخ نهاية العلاج
+    reason: Optional[str] = None      # سبب العلاج
+
+class MedicationCreate(MedicationBase):
     pass
+
+class MedicationEntry(BaseModel):
+    notes: Optional[str] = None  # ملاحظات
+    record_id: str               # معرف السجل
+    patient_name: str            # اسم المريض
+    added_by_name: str           # اسم الشخص الذي أضاف السجل
+    entry_date: str              # تاريخ الإدخال
+    name: str                    # اسم الدواء
+    dosage: str                  # جرعة الدواء
+    frequency: str               # تكرار الدواء
+    start_date: Optional[date] = None  # تاريخ بدء العلاج
+    end_date: Optional[date] = None    # تاريخ انتهاء العلاج
+    reason: Optional[str] = None      # السبب
+    current: Optional[bool] = False    # هل الدواء قيد الاستخدام حاليًا؟
+    certain_duration: Optional[bool] = True  # هل المدة العلاجية معينة؟
+
+    class Config:
+        from_attributes = True
+
+
 
 # --- Diagnosis Models ---
 class DiagnosisBase(BaseInput): diagnosis_code: Optional[str] = None; diagnosis_description: str; diagnosis_date: str = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d")); status: Optional[str] = None
