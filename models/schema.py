@@ -243,9 +243,17 @@ class DiagnosisEntry(BaseModel):
 
 
 # --- Allergy Models ---
-class AllergyBase(BaseInput): allergen: str; reaction: Optional[str] = None; severity: Optional[str] = None; onset_date: Optional[str] = None
-class AllergyCreate(AllergyBase): pass
-class Allergy(AllergyBase, BaseRecord): # BaseRecord already has Config
+class AllergyBase(BaseInput):
+    allergen: str
+    reaction: Optional[str] = None
+    severity: Optional[str] = None
+    onset_date: Optional[str] = None
+    added_by: str  # ✅ هذا السطر ضروري
+
+class AllergyCreate(AllergyBase):
+    pass
+
+class Allergy(AllergyBase, BaseRecord):
     pass
 
 # --- FamilyHistory Models ---
