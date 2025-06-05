@@ -175,9 +175,17 @@ class HeightWeight(HeightWeightBase, BaseRecord): # BaseRecord already has Confi
     pass
 
 # --- Radiology Models ---
-class RadiologyTestBase(BaseInput): test_name: str; test_date: str = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d")); body_part: Optional[str] = None; findings: Optional[str] = None; impression: Optional[str] = None
-class RadiologyTestInput(RadiologyTestBase): pass
-class RadiologyTest(RadiologyTestBase, BaseRecord): # BaseRecord already has Config
+class RadiologyTestBase(BaseInput):
+    test_name: str
+    test_date: str = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d"))
+    body_part: Optional[str] = None
+    findings: Optional[str] = None
+    impression: Optional[str] = None
+
+class RadiologyTestInput(RadiologyTestBase):
+    added_by: str  # ✅ لازم تضيف السطر ده هنا
+
+class RadiologyTest(RadiologyTestBase, BaseRecord):
     pass
 
 # --- Hypertension Models ---
