@@ -14,17 +14,21 @@ def add_allergy(national_id: str, entry: Allergy):
         raise HTTPException(status_code=404, detail="User not found")
 
     timestamp_id = datetime.now(egypt_tz).strftime("%Y-%m-%d %H:%M:%S")
+    record_id = str(uuid4())
+
     data = entry.dict()
     data["date"] = timestamp_id
+    data["added_by"] = entry.added_by  # ✅ مهم لتحديث/حذف لاحقًا
 
     user_ref \
         .collection("ClinicalIndicators") \
         .document("allergies") \
         .collection("Records") \
-        .document(entry.allergen_name) \
+        .document(record_id) \
         .set(data)
 
-    return {"message": "Allergy added"}
+    return {"message": "Allergy added", "id": record_id}
+
 
 @router.get("/{national_id}")
 def get_allergies(national_id: str):
