@@ -99,7 +99,7 @@ def get_user_info_by_qr(user_id: str):
         db.collection("Users").document(user_id).collection("surgeries"), "surgeries"
     )
 
-    # ✅ الأشعة (Radiology)
+    # ✅ الأشعة
     user_data["radiology"] = get_collection_fallback(
         db.collection("Users").document(user_id)
         .collection("ClinicalIndicators")
@@ -107,7 +107,7 @@ def get_user_info_by_qr(user_id: str):
         .collection("Records"), "radiology"
     )
 
-    # ✅ التحاليل (Blood Biomarkers)
+    # ✅ التحاليل
     user_data["biomarkers"] = get_collection_fallback(
         db.collection("Users").document(user_id)
         .collection("ClinicalIndicators")
@@ -157,7 +157,7 @@ def get_user_info_by_qr(user_id: str):
         db.collection("Users").document(user_id).collection("medications"), "medications"
     )
 
-    # ✅ الأمراض المزمنة من الفيلد فقط
+    # ✅ الأمراض المزمنة
     user_data["chronic_diseases"] = user_data.get("chronic_diseases", [])
 
     # ✅ جهات الطوارئ
@@ -177,5 +177,6 @@ def get_user_info_by_qr(user_id: str):
         "user_id": user_id,
         "user_info": user_data
     }
+
 
 
