@@ -105,7 +105,27 @@ def get_user_info_by_qr(user_id: str):
     user_data["hypertension_stage"] = None
     if bp_docs:
         latest_bp = bp_docs[0].to_dict()
-        user_data["hypertension_stage"] = latest_bp.get("stage_name") or latest_bp.get("bp_category", "غير متوفر")
+
+        systolic = latest_bp.get("systolic")
+        diastolic = latest_bp.get("diastolic")
+
+        # تصنيف المرحلة بناءً على القيم
+        def classify_bp_stage(sys, dia):
+            if sys >= 180 or dia >= 120:
+                return "Stage 3 - Hypertensive Crisis"
+            elif sys >= 140 or dia >= 90:
+                return "Stage 2 - Hypertension"
+            elif sys >= 130 or dia >= 80:
+                return "Stage 1 - Hypertension"
+            elif sys >= 120 and dia < 80:
+                return "Elevated"
+            else:
+                return "Normal"
+
+        if systolic is not None and diastolic is not None:
+            user_data["hypertension_stage"] = classify_bp_stage(systolic, diastolic)
+        else:
+            user_data["hypertension_stage"] = "غير متوفر"
 
     # ✅ اجلب الأشعة
     user_data["radiology"] = [
