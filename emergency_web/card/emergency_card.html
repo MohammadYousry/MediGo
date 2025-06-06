@@ -146,7 +146,7 @@
 
 
         const profile = document.getElementById('profile_photo');
-        const imageUrl = user.profile_photo || user.profile_image;
+        const imageUrl = user.profile_photo || user.profile_picture_url || user.profile_image;
 
         if (imageUrl) {
           const testImage = new Image();
