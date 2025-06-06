@@ -150,11 +150,16 @@ def get_user_info_by_qr(user_id: str):
     ]
 
     # ✅ تصليح الصورة علشان HTML يعرف يقراها
-    user_data["profile_photo"] = user_data.get("profile_picture_url") or user_data.get("profile_image")
+    user_data["profile_photo"] = (
+        user_data.get("profile_photo") or
+        user_data.get("profile_picture_url") or
+        user_data.get("profile_image") or
+        "https://medigo-eg.netlify.app/medi_go_logo.png"
+    )
 
     return {
         "user_id": user_id,
         "user_info": user_data
-}
+    }
 
 
