@@ -176,8 +176,12 @@
           if (items?.length) {
             el.classList.remove('empty');
             el.innerHTML = items.map(format).join('');
+          } else {
+            el.innerHTML = 'لا توجد بيانات';
+            el.classList.add('empty');
           }
         };
+
 
         renderList("chronic_diseases_list", user.chronic_diseases, d => `<span class="pill">${d}</span>`);
         renderList("medications_list", user.medications, m => `<span class="pill">${m.name} (${m.dosage || ''}, ${m.frequency || ''})</span>`);
