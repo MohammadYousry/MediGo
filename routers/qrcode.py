@@ -77,7 +77,6 @@ async def create_qr_code(
         print(f"❌ [create_qr_code] Error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error creating QR code: {str(e)}")
 
-# 🌐 استرجاع بيانات المستخدم لبطاقة الطوارئ
 @router.get("/{user_id}", response_model=QRCodeWithUserInfoResponse)
 def get_user_info_by_qr(user_id: str):
     user_doc = db.collection("Users").document(user_id).get()
@@ -86,30 +85,51 @@ def get_user_info_by_qr(user_id: str):
 
     user_data = user_doc.to_dict()
 
-    # ✅ اجلب العمليات الجراحية
-    user_data["surgeries"] = [
-        doc.to_dict() for doc in db.collection("Users").document(user_id).collection("surgeries").stream()
-    ]
+    def get_collection_fallback(primary_path, fallback_field):
+        try:
+            data = [doc.to_dict() for doc in primary_path.stream()]
+            if data:
+                return data
+        except:
+            pass
+        return user_data.get(fallback_field, [])
 
-    # ✅ اجلب التحاليل (biomarkers)
-    user_data["biomarkers"] = [
-        doc.to_dict() for doc in db.collection("Users").document(user_id)
-        .collection("ClinicalIndicators").document("bloodbiomarkers")
-        .collection("Records").stream()
-    ]
+    # ✅ العمليات الجراحية
+    user_data["surgeries"] = get_collection_fallback(
+        db.collection("Users").document(user_id).collection("surgeries"), "surgeries"
+    )
 
-    # ✅ اجلب بيانات ضغط الدم
+    # ✅ الأشعة (Radiology)
+    user_data["radiology"] = get_collection_fallback(
+        db.collection("Users").document(user_id)
+        .collection("ClinicalIndicators")
+        .document("radiology")
+        .collection("Records"), "radiology"
+    )
+
+    # ✅ التحاليل (Blood Biomarkers)
+    user_data["biomarkers"] = get_collection_fallback(
+        db.collection("Users").document(user_id)
+        .collection("ClinicalIndicators")
+        .document("bloodbiomarkers")
+        .collection("Records"), "biomarkers"
+    )
+
+    # ✅ ضغط الدم
     bp_docs = list(db.collection("Users").document(user_id)
-        .collection("ClinicalIndicators").document("Hypertension")
-        .collection("Records").order_by("timestamp", direction=firestore.Query.DESCENDING).limit(1).stream())
+        .collection("ClinicalIndicators")
+        .document("Hypertension")
+        .collection("Records")
+        .order_by("timestamp", direction=firestore.Query.DESCENDING)
+        .limit(1)
+        .stream())
+
     user_data["hypertension_stage"] = None
     if bp_docs:
         latest_bp = bp_docs[0].to_dict()
-
         systolic = latest_bp.get("systolic")
         diastolic = latest_bp.get("diastolic")
 
-        # تصنيف المرحلة بناءً على القيم
         def classify_bp_stage(sys, dia):
             if sys >= 180 or dia >= 120:
                 return "Stage 3 - Hypertensive Crisis"
@@ -127,29 +147,25 @@ def get_user_info_by_qr(user_id: str):
         else:
             user_data["hypertension_stage"] = "غير متوفر"
 
-    # ✅ اجلب الأشعة
-    user_data["radiology"] = [
-        doc.to_dict() for doc in db.collection("Users").document(user_id).collection("radiology").stream()
-    ]
+    # ✅ الحساسية
+    user_data["allergies"] = get_collection_fallback(
+        db.collection("Users").document(user_id).collection("allergies"), "allergies"
+    )
 
-    # ✅ اجلب الحساسية
-    user_data["allergies"] = [
-        doc.to_dict() for doc in db.collection("Users").document(user_id).collection("allergies").stream()
-    ]
+    # ✅ الأدوية
+    user_data["medications"] = get_collection_fallback(
+        db.collection("Users").document(user_id).collection("medications"), "medications"
+    )
 
-    # ✅ اجلب الأدوية
-    user_data["medications"] = [
-        doc.to_dict() for doc in db.collection("Users").document(user_id).collection("medications").stream()
-    ]
-
-    # ✅ الأمراض المزمنة
+    # ✅ الأمراض المزمنة من الفيلد فقط
     user_data["chronic_diseases"] = user_data.get("chronic_diseases", [])
 
-    user_data["emergency_contacts"] = [
-        doc.to_dict() for doc in db.collection("Users").document(user_id).collection("emergency_contacts").stream()
-    ]
+    # ✅ جهات الطوارئ
+    user_data["emergency_contacts"] = get_collection_fallback(
+        db.collection("Users").document(user_id).collection("emergency_contacts"), "emergency_contacts"
+    )
 
-    # ✅ تصليح الصورة علشان HTML يعرف يقراها
+    # ✅ صورة البروفايل
     user_data["profile_photo"] = (
         user_data.get("profile_photo") or
         user_data.get("profile_picture_url") or
