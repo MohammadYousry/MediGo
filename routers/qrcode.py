@@ -145,16 +145,16 @@ def get_user_info_by_qr(user_id: str):
     # ✅ الأمراض المزمنة
     user_data["chronic_diseases"] = user_data.get("chronic_diseases", [])
 
-    # ✅ جهات اتصال الطوارئ
     user_data["emergency_contacts"] = [
         doc.to_dict() for doc in db.collection("Users").document(user_id).collection("emergency_contacts").stream()
     ]
 
-    # ✅ رابط الصورة الشخصية لو موجود
-    user_data["image_url"] = user_data.get("profile_picture_url")
+    # ✅ تصليح الصورة علشان HTML يعرف يقراها
+    user_data["profile_photo"] = user_data.get("profile_picture_url") or user_data.get("profile_image")
 
     return {
         "user_id": user_id,
         "user_info": user_data
-    }
+}
+
 
