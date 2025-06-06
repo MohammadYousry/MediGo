@@ -135,7 +135,14 @@
         if (!response.ok) throw new Error("Failed to fetch");
 
         const data = await response.json();
-        const user = data.user_info;
+        const user = {
+          ...data.user_info,
+          biomarkers: data.biomarkers || [],
+          radiology: data.radiology || [],
+          surgeries: data.surgeries || [],
+          hypertension_stage: data.hypertension_stage || "غير متوفر"
+        };
+
 
         const profile = document.getElementById('profile_photo');
         const imageUrl = user.profile_photo || user.profile_image;
