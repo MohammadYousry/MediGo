@@ -185,7 +185,9 @@
 
         renderList("chronic_diseases_list", user.chronic_diseases, d => `<span class="pill">${d}</span>`);
         renderList("medications_list", user.medications, m => `<span class="pill">${m.name} (${m.dosage || ''}, ${m.frequency || ''})</span>`);
-        renderList("allergies_list", user.allergies, a => `<span class="pill">${a.allergen} (${a.reaction || 'بدون رد فعل'}, ${a.severity || 'غير معروف'})</span>`);
+        renderList("allergies_list", user.allergies, a =>
+          `<span class="pill">${a.allergen || a.name} (${a.reaction || 'بدون رد فعل'}, ${a.severity || a.notes || 'غير معروف'})</span>`
+        );
         renderList("biomarkers_list", user.biomarkers, b => `<span class="pill">${b.test_name}: ${b.value} ${b.unit || ''}</span>`);
         renderList("surgeries_list", user.surgeries, s => `<span class="pill">${s.name || 'عملية'} - ${s.date || ''}</span>`);
         renderList("radiology_list", user.radiology, r => `<span class="pill">${r.test_type || 'نوع'} - ${r.result || ''}</span>`);
