@@ -27,6 +27,20 @@ def add_surgery(national_id: str, entry: SurgeryCreate):
     user_ref.collection("surgeries").document(record_id).set(data)
     return {"message": "Surgery entry added", "record_id": record_id}
 
+# ✅ Legacy Compatibility Endpoint
+@router.post("/legacy/", tags=["Legacy Compatibility"])
+def add_legacy_surgery(national_id: str, legacy_entry: LegacySurgeryEntry):
+    print("✅ Legacy surgery endpoint hit.")
+    new_data = {
+        "surgery_name": legacy_entry.procedure_name,
+        "doctor_name": legacy_entry.surgeon_name,
+        "surgery_date": str(legacy_entry.surgery_date),
+        "notes": legacy_entry.procedure_notes,
+        "added_by": legacy_entry.added_by or "hospital_default"
+    }
+    new_entry = SurgeryCreate(**new_data)
+    return add_surgery(national_id, new_entry)
+
 
 # ---------------------- Get All Surgeries ----------------------
 @router.get("/{national_id}")
