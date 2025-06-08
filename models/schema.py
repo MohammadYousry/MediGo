@@ -1,7 +1,6 @@
 from pydantic import BaseModel, EmailStr, Field
 from typing import List, Optional, Dict, Any, Union
-from datetime import date, datetime
-
+from datetime import date as dt_date, datetime
 # --- Helper Functions (Placeholders) ---
 def fetch_patient_name(patient_national_id: str, db_session) -> Optional[str]:
     print(f"[Placeholder] fetch_patient_name called for {patient_national_id}")
