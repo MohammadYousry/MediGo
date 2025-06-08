@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Request
-from models.schema import Allergy # Make sure the model is correct
+from models.schema import Allergy, AllergyCreate
 from datetime import datetime
 from firebase_config import db
 from uuid import uuid4
@@ -36,8 +36,7 @@ def get_allergies(national_id: str):
     return [doc.to_dict() for doc in docs]
 
 @router.put("/{national_id}/{record_id}")
-def update_allergy(national_id: str, record_id: str, entry: Allergy):
-    # ✅ Using the correct, simple path
+def update_allergy(national_id: str, record_id: str, entry: AllergyCreate):
     allergy_ref = db.collection("Users").document(national_id).collection("allergies").document(record_id)
     doc = allergy_ref.get()
 
