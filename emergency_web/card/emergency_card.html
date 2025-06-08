@@ -207,7 +207,9 @@
         );
         renderList("surgeries_list", user.surgeries, s => `<span class="pill">${s.surgery_name || 'عملية'} - ${s.surgery_date || ''}</span>`);        
         renderList("radiology_list", user.radiology, r => `<span class="pill">${r.test_name || 'نوع'} - ${r.findings || r.impression || 'لا توجد نتائج'}</span>`);
-        renderList("diagnoses_list", user.diagnoses, d => `<span class="pill"><span class="math-inline">\{d\.diagnosis\_description\} \(</span>{d.status || 'نشط'})</span>`);        renderList("family_history_list", user.family_history, h => `<span class="pill">${h.relative_name || h.relationship}: ${h.condition}</span>`);
+        // ✅ Corrected and separated lines
+        renderList("diagnoses_list", user.diagnoses, d => `<span class="pill">${d.diagnosis_description} (${d.status || 'نشط'})</span>`);
+        renderList("family_history_list", user.family_history, h => `<span class="pill">${h.relative_name || h.relationship}: ${h.condition}</span>`);
 
         document.getElementById('bp_stage').textContent = user.hypertension_stage || 'غير متوفر';
 
