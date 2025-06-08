@@ -1,6 +1,6 @@
 from datetime import datetime, date as dt_date
 from fastapi import APIRouter, HTTPException, Request
-from models.schema import MedicationEntry
+from models.schema import MedicationEntry, MedicationCreate
 from firebase_config import db
 import pytz
 
@@ -8,7 +8,7 @@ egypt_tz = pytz.timezone("Africa/Cairo")
 router = APIRouter(prefix="/medications", tags=["Medications"])
 
 @router.post("/{national_id}")
-def add_medication(national_id: str, entry: MedicationEntry):
+def add_medication(national_id: str, entry: MedicationCreate):
     user_ref = db.collection("Users").document(national_id)
     if not user_ref.get().exists:
         raise HTTPException(status_code=404, detail="User not found")
@@ -52,7 +52,7 @@ def get_medications(national_id: str):
 
 
 @router.put("/{national_id}/{record_id}")
-def update_medication(national_id: str, record_id: str, entry: MedicationEntry):
+def update_medication(national_id: str, record_id: str, entry: MedicationCreate):
     med_ref = db.collection("Users").document(national_id).collection("medications").document(record_id)
     doc = med_ref.get()
     if not doc.exists:
