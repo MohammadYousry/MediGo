@@ -69,11 +69,11 @@ async def assess_risk(national_id: str):
         features = {
             "male": 1 if user.get("gender") == "male" else 0,
             "BPMeds": int(medications.get("bp_medication", 0)),
-            "totChol": float(next((r.get("value") for r in results if r.get("item") == "Cholesterol"), 180)),
-            "sysBP": float(hypertension.get("sysBP", 120)),
-            "diaBP": float(hypertension.get("diaBP", 80)),
-            "heartRate": float(hypertension.get("heartRate", 72)),
-            "glucose": float(next((r.get("value") for r in results if r.get("item") == "Glucose"), 100)),
+            "totChol": float(next((r.get("value") for r in results if r.get("test_name") == "Cholesterol"), 180)),
+            "sysBP": float(hypertension.get("systolic", 120)),
+            "diaBP": float(hypertension.get("diastolic", 80)),
+            "heartRate": float(hypertension.get("pulse", 72)), # Also corrected 'heartRate' to 'pulse'
+            "glucose": float(next((r.get("value") for r in results if r.get("test_name") == "Glucose"), 100)),
             "age_group": int(user.get("age_group", 1)),
             "smoker_status": int(user.get("smoker_status", 0)),
             "is_obese": is_obese,
