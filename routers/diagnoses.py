@@ -40,7 +40,20 @@ def get_diagnoses(national_id: str):
     docs = user_ref.collection("diagnoses").stream()
     return [{**doc.to_dict(), "id": doc.id} for doc in docs]
 
-
+# ✅ Legacy Compatibility Endpoint
+@router.post("/legacy/", tags=["Legacy Compatibility"])
+def add_legacy_diagnosis(national_id: str, legacy_entry: LegacyDiagnosisEntry):
+    print("✅ Legacy diagnosis endpoint hit.")
+    new_data = {
+        "diagnosis_description": legacy_entry.disease_name,
+        "diagnosis_date": str(legacy_entry.diagnosis_date),
+        "status": "Chronic" if legacy_entry.is_chronic else "Active",
+        "notes": legacy_entry.details_notes,
+        "added_by": legacy_entry.added_by or "doctor_default"
+    }
+    new_entry = DiagnosisCreate(**new_data)
+    return add_diagnosis(national_id, new_entry)
+    
 # ---------------------- Update Diagnosis ----------------------
 @router.put("/{national_id}/{record_id}")
 def update_diagnosis(national_id: str, record_id: str, entry: DiagnosisCreate):
