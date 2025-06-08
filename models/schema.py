@@ -77,6 +77,7 @@ class UserResponse(UserBase):
 
 class UserEmergencyInfo(UserBase):
     age: Optional[int] = None
+    allergies: Optional[List[Dict[str, Any]]] = Field(default_factory=list)  # ✅✅✅ أضف هذا السطر
     surgeries: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
     radiology: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
     biomarkers: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
