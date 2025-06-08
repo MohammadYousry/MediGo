@@ -163,7 +163,12 @@ class DoctorAssignment(DoctorAssignmentBase):
 
 
 # --- Surgery Models ---
-class SurgeryBase(BaseInput): surgery_name: str; surgery_date: str; hospital_name: Optional[str] = None; doctor_name: Optional[str] = None
+class SurgeryBase(BaseInput):
+    surgery_name: str
+    surgery_date: str
+    hospital_name: Optional[str] = None
+    doctor_name: Optional[str] = None
+    added_by: str  # ✅ أضف هذا السطر
 class SurgeryCreate(SurgeryBase): pass
 class SurgeryEntry(SurgeryBase, BaseRecord): # BaseRecord already has Config
     pass 
@@ -200,7 +205,11 @@ class RadiologyTest(RadiologyTestBase, BaseRecord):
 
 # --- Hypertension Models ---
 class HypertensionReading(BaseModel): systolic: int = Field(..., gt=0); diastolic: int = Field(..., gt=0); pulse: Optional[int] = Field(None, gt=0)
-class HypertensionBase(BaseInput): reading_date: str = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S")); readings: HypertensionReading; position: Optional[str] = None
+class HypertensionBase(BaseInput):
+    reading_date: str = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    readings: HypertensionReading
+    position: Optional[str] = None
+    added_by: str  # ✅ أضف هذا السطر
 class HypertensionCreate(HypertensionBase): pass
 class HypertensionEntry(HypertensionBase, BaseRecord): # BaseRecord already has Config
     pass
@@ -210,9 +219,10 @@ class MedicationBase(BaseInput):
     name: str
     dosage: Optional[str] = None
     frequency: Optional[str] = None
-    start_date: Optional[str] = None  # تاريخ بداية العلاج
-    end_date: Optional[str] = None    # تاريخ نهاية العلاج
-    reason: Optional[str] = None      # سبب العلاج
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    reason: Optional[str] = None
+    added_by: str  # ✅ أضف هذا السطر
 
 class MedicationCreate(MedicationBase):
     pass
@@ -238,7 +248,12 @@ class MedicationEntry(BaseModel):
 
 
 # --- Diagnosis Models ---
-class DiagnosisBase(BaseInput): diagnosis_code: Optional[str] = None; diagnosis_description: str; diagnosis_date: str = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d")); status: Optional[str] = None
+class DiagnosisBase(BaseInput):
+    diagnosis_code: Optional[str] = None
+    diagnosis_description: str
+    diagnosis_date: str = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d"))
+    status: Optional[str] = None
+    added_by: str  # ✅ أضف هذا السطر
 class DiagnosisCreate(DiagnosisBase): pass
 class DiagnosisEntry(BaseModel):
     notes: str
