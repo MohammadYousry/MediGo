@@ -89,7 +89,7 @@ def delete_bp(national_id: str, record_id: str, request: Request):
     if not doc.exists:
         raise HTTPException(status_code=404, detail="Record not found")
 
-    if doc.to_dict().get("added_by_name") != added_by:
+    if doc.to_dict().get("added_by") != added_by:
         raise HTTPException(status_code=403, detail="You are not authorized to delete this record")
 
     record_ref.delete()
