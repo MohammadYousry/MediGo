@@ -164,7 +164,23 @@ def get_user_info_by_qr(user_id: str):
     user_data["emergency_contacts"] = get_collection_fallback(
         db.collection("Users").document(user_id).collection("emergency_contacts"), "emergency_contacts"
     )
+    # In routers/qrcode.py, inside get_user_info_by_qr
 
+    # ... (after fetching emergency_contacts)
+
+    # --- ADD THESE TWO BLOCKS ---
+
+    # ✅ التشخيصات
+    user_data["diagnoses"] = get_collection_fallback(
+        db.collection("Users").document(user_id).collection("diagnoses"), "diagnoses"
+    )
+
+    # ✅ التاريخ العائلي
+    user_data["family_history"] = get_collection_fallback(
+        db.collection("Users").document(user_id).collection("family_history"), "family_history"
+    )
+    
+    # ... (before profile_photo logic)
     # In routers/qrcode.py at the end of the get_user_info_by_qr function
 
     # ... (all the data fetching logic remains the same)
