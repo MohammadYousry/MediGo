@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Request
-from models.schema import HypertensionEntry
+from models.schema import HypertensionEntry, HypertensionCreate
 from firebase_config import db
 from datetime import datetime
 import pytz
@@ -9,7 +9,7 @@ router = APIRouter(prefix="/hypertension", tags=["Hypertension"])
 
 
 @router.post("/{national_id}")
-def add_bp(national_id: str, entry: HypertensionEntry):
+def add_bp(national_id: str, entry: HypertensionCreate):
     user_ref = db.collection("Users").document(national_id)
     if not user_ref.get().exists:
         raise HTTPException(status_code=404, detail="User not found")
@@ -58,7 +58,7 @@ def get_bp(national_id: str):
 
 
 @router.put("/{national_id}/{record_id}")
-def update_bp(national_id: str, record_id: str, entry: HypertensionEntry):
+def update_bp(national_id: str, record_id: str, entry: HypertensionCreate):
     record_ref = db.collection("Users") \
         .document(national_id) \
         .collection("ClinicalIndicators") \
