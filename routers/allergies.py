@@ -21,12 +21,7 @@ def add_allergy(national_id: str, entry: Allergy):
     data["date"] = timestamp_id
     data["added_by"] = entry.added_by
 
-    user_ref \
-        .collection("ClinicalIndicators") \
-        .document("allergies") \
-        .collection("Records") \
-        .document(record_id) \
-        .set(data)
+    user_ref.collection("allergies").document(record_id).set(data)
 
     return {"message": "Allergy added", "id": record_id}
 
