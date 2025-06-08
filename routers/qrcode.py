@@ -85,7 +85,7 @@ def get_user_info_by_qr(user_id: str):
 
     user_data = user_doc.to_dict()
 
-    # استبدل الدالة القديمة بهذه
+    # ✅ الدالة الجديدة والمحسّنة
     def get_collection(path):
         """Fetches all documents from a given collection path."""
         try:
@@ -94,10 +94,20 @@ def get_user_info_by_qr(user_id: str):
             print(f"Warning: Could not fetch collection at {path.path}. Error: {e}")
             return []
 
-    # ✅ العمليات الجراحية
+    # ✅ استدعاءات نظيفة ومباشرة لكل البيانات من الـ sub-collections
+    user_data["surgeries"] = get_collection(db.collection("Users").document(user_id).collection("surgeries"))
+    user_data["radiology"] = get_collection(db.collection("Users").document(user_id).collection("ClinicalIndicators").document("radiology").collection("Records"))
+    user_data["biomarkers"] = get_collection(db.collection("Users").document(user_id).collection("ClinicalIndicators").document("bloodbiomarkers").collection("Records"))
+    user_data["allergies"] = get_collection(db.collection("Users").document(user_id).collection("allergies"))
+    user_data["medications"] = get_collection(db.collection("Users").document(user_id).collection("medications"))
+    user_data["emergency_contacts"] = get_collection(db.collection("Users").document(user_id).collection("emergency_contacts"))
+    user_data["diagnoses"] = get_collection(db.collection("Users").document(user_id).collection("diagnoses"))
+    user_data["family_history"] = get_collection(db.collection("Users").document(user_id).collection("family_history"))
     
+    # ✅ الأمراض المزمنة (من المستند الرئيسي)
+    user_data["chronic_diseases"] = user_data.get("chronic_diseases", [])
 
-    # ✅ ضغط الدم
+    # ✅ منطق ضغط الدم (بقي كما هو)
     bp_docs = list(db.collection("Users").document(user_id)
         .collection("ClinicalIndicators")
         .document("Hypertension")
@@ -106,76 +116,23 @@ def get_user_info_by_qr(user_id: str):
         .limit(1)
         .stream())
 
-    user_data["hypertension_stage"] = None
+    user_data["hypertension_stage"] = "غير متوفر" # قيمة افتراضية
     if bp_docs:
         latest_bp = bp_docs[0].to_dict()
         systolic = latest_bp.get("systolic")
         diastolic = latest_bp.get("diastolic")
 
         def classify_bp_stage(sys, dia):
-            if sys >= 180 or dia >= 120:
-                return "Stage 3 - Hypertensive Crisis"
-            elif sys >= 140 or dia >= 90:
-                return "Stage 2 - Hypertension"
-            elif sys >= 130 or dia >= 80:
-                return "Stage 1 - Hypertension"
-            elif sys >= 120 and dia < 80:
-                return "Elevated"
-            else:
-                return "Normal"
+            if sys >= 180 or dia >= 120: return "Stage 3 - Hypertensive Crisis"
+            if sys >= 140 or dia >= 90: return "Stage 2 - Hypertension"
+            if sys >= 130 or dia >= 80: return "Stage 1 - Hypertension"
+            if sys >= 120 and dia < 80: return "Elevated"
+            return "Normal"
 
-        if systolic is not None and diastolic is not None:
+        if systolic and diastolic:
             user_data["hypertension_stage"] = classify_bp_stage(systolic, diastolic)
-        else:
-            user_data["hypertension_stage"] = "غير متوفر"
 
-    
-
-    # ✅ الأمراض المزمنة
-    user_data["chronic_diseases"] = user_data.get("chronic_diseases", [])
-
-    # ✅ جهات الطوارئ
-    
-    # In routers/qrcode.py, inside get_user_info_by_qr
-
-    # ... (after fetching emergency_contacts)
-
-    # --- ADD THESE TWO BLOCKS ---
-
-    # ✅ التشخيصات
-    # In get_user_info_by_qr function:
-
-# ✅ العمليات الجراحية
-    user_data["surgeries"] = get_collection(db.collection("Users").document(user_id).collection("surgeries"))
-
-# ✅ الأشعة
-    user_data["radiology"] = get_collection(db.collection("Users").document(user_id).collection("ClinicalIndicators").document("radiology").collection("Records"))
-
-# ✅ التحالليل
-    user_data["biomarkers"] = get_collection(db.collection("Users").document(user_id).collection("ClinicalIndicators").document("bloodbiomarkers").collection("Records"))
-
-# ✅ الحساسية
-    user_data["allergies"] = get_collection(db.collection("Users").document(user_id).collection("allergies"))
-
-# ✅ الأدوية
-    user_data["medications"] = get_collection(db.collection("Users").document(user_id).collection("medications"))
-
-# ✅ جهات الطوارئ
-    user_data["emergency_contacts"] = get_collection(db.collection("Users").document(user_id).collection("emergency_contacts"))
-
-# ✅ التشخيصات
-    user_data["diagnoses"] = get_collection(db.collection("Users").document(user_id).collection("diagnoses"))
-
-# ✅ التاريخ العائلي
-    user_data["family_history"] = get_collection(db.collection("Users").document(user_id).collection("family_history"))
-    
-    # ... (before profile_photo logic)
-    # In routers/qrcode.py at the end of the get_user_info_by_qr function
-
-    # ... (all the data fetching logic remains the same)
-
-    # ✅ صورة البروفايل (Refined Logic)
-    # This ensures we get a valid URL or the default one.
+    # ✅ صورة البروفايل
     user_data["profile_photo"] = (
         user_data.get("profile_picture_url") or
         user_data.get("profile_photo") or
@@ -183,12 +140,8 @@ def get_user_info_by_qr(user_id: str):
         "https://medigo-eg.netlify.app/medi_go_logo.png"  # Fallback
     )
     
-    # The final returned object should be structured to match QRCodeWithUserInfoResponse
-    # The key is to pass the user_data dictionary directly to the user_info field.
+    # ✅ إرجاع البيانات باستخدام النموذج الصحيح
     return QRCodeWithUserInfoResponse(
         user_id=user_id,
         user_info=user_data 
     )
-
-
-
