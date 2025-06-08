@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Request
-from models.schema import HypertensionCreate # تم تعديل الـ import
+from models.schema import HypertensionCreate, LegacyHypertensionEntry
 from firebase_config import db
 from datetime import datetime
 import pytz
@@ -32,6 +32,30 @@ def add_bp(national_id: str, entry: HypertensionCreate):
 
     user_ref.collection("ClinicalIndicators").document("Hypertension").collection("Records").document(timestamp_id).set(data)
     return {"message": "Blood pressure record added", "id": timestamp_id}
+
+
+
+# --- ✅ Legacy Compatibility Endpoint (The Adapter) ---
+
+@router.post("/legacy/{national_id}", tags=["Legacy Compatibility"])
+def add_legacy_bp(national_id: str, legacy_entry: LegacyHypertensionEntry):
+    """Accepts Clara's old BP model and translates it."""
+    print("✅ Legacy hypertension endpoint hit. Translating...")
+
+    # --- Translation Stage ---
+    # We need to create the nested 'readings' object that our new model expects
+    new_data = {
+        "readings": {
+            "systolic": legacy_entry.sys_value,
+            "diastolic": legacy_entry.dia_value,
+            "pulse": 75 # Clara's model doesn't have pulse, add a default
+        },
+        "added_by": legacy_entry.added_by or "clinic_default"
+    }
+    new_entry = HypertensionCreate(**new_data)
+
+    # --- Call Your Original, Robust Function ---
+    return add_bp(national_id, new_entry)
 
 
 @router.put("/{national_id}/{record_id}")
