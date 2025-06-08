@@ -49,6 +49,35 @@ def create_user(user: UserCreate):
     print(f"✅ Created user {user.full_name} ({user.national_id})")
     return {**user.dict(), "age": age}
 
+# ✅ Legacy Compatibility Endpoint
+@router.post("/legacy/", tags=["Legacy Compatibility"], response_model=UserResponse)
+def create_legacy_user(legacy_user: LegacyUserCreate):
+    """Accepts the OLD user structure, translates it, and calls the new create_user function."""
+    print("✅ Legacy user endpoint hit. Translating to new format...")
+    
+    new_user_data = {
+        "national_id": legacy_user.national_id,
+        "password": legacy_user.password,
+        "full_name": legacy_user.full_name,
+        "date_of_birth": legacy_user.birthdate, # Translation
+        "phone_number": legacy_user.phone_number,
+        "email": legacy_user.email,
+        "gender": legacy_user.gender,
+        "blood_type": legacy_user.blood_group, # Translation
+        "address": legacy_user.address,
+        "region": legacy_user.region,
+        "city": legacy_user.city,
+        "profile_picture_url": legacy_user.profile_photo,
+        "current_smoker": legacy_user.current_smoker,
+        "cigs_per_day": legacy_user.cigs_per_day,
+        "doctoremail": None # Clara's model doesn't have this
+    }
+    
+    new_user_object = UserCreate(**new_user_data)
+    
+    print("✅ Translation complete. Calling the main create_user function.")
+    return create_user(new_user_object)
+    
 # -------------------- Update User --------------------
 @router.put("/{national_id}", response_model=dict)
 async def update_user(national_id: str, updated_user: UserUpdate):
