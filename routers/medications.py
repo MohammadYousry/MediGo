@@ -1,7 +1,6 @@
 from datetime import datetime, date as dt_date
 from fastapi import APIRouter, HTTPException, Request
-# Make sure both models are imported
-from models.schema import MedicationEntry, MedicationCreate
+from models.schema import MedicationEntry, MedicationCreate, LegacyMedicationEntry
 from firebase_config import db
 import pytz
 
@@ -93,3 +92,28 @@ def delete_medication(national_id: str, record_id: str, request: Request):
 
     med_ref.delete()
     return {"message": "Medication deleted", "id": record_id}
+
+# في routers/medications.py
+
+# ... دوالك الحالية تبقى كما هي
+
+@router.post("/legacy/medications/{national_id}", tags=["Legacy Compatibility"])
+def add_legacy_medication(national_id: str, legacy_entry: LegacyMedicationEntry):
+    print(f"✅ Legacy medication endpoint hit for user {national_id}.")
+    
+    # --- 1. الترجمة ---
+    new_med_data = {
+        "name": legacy_entry.trade_name,  # ترجمة trade_name إلى name
+        "dosage": legacy_entry.dosage,
+        "frequency": legacy_entry.frequency,
+        "start_date": legacy_entry.start_date.isoformat() if legacy_entry.start_date else None,
+        "end_date": legacy_entry.end_date.isoformat() if legacy_entry.end_date else None,
+        "current": legacy_entry.current,
+        "reason": legacy_entry.notes,
+        "added_by": legacy_entry.added_by
+    }
+    new_entry = MedicationCreate(**new_med_data)
+    
+    # --- 2. استدعاء الدالة الأصلية ---
+    print("✅ Translation complete. Calling the main add_medication function.")
+    return add_medication(national_id, new_entry)
