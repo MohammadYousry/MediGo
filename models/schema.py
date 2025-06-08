@@ -46,10 +46,7 @@ class UserBase(BaseModel):
     region: Optional[str] = None
     blood_type: Optional[str] = None
     profile_picture_url: Optional[str] = None
-    emergency_contacts: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
-    allergies: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
     chronic_diseases: Optional[List[str]] = Field(default_factory=list)
-    medications: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
 
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8)
