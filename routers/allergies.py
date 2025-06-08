@@ -9,7 +9,8 @@ router = APIRouter(prefix="/allergies", tags=["Allergies"])
 egypt_tz = pytz.timezone("Africa/Cairo")
 
 @router.post("/{national_id}")
-def add_allergy(national_id: str, entry: Allergy):
+# The corrected line
+def add_allergy(national_id: str, entry: AllergyCreate):
     user_ref = db.collection("Users").document(national_id)
     if not user_ref.get().exists:
         raise HTTPException(status_code=404, detail="User not found")
