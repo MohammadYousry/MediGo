@@ -1,6 +1,7 @@
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 from typing import List, Optional, Dict, Any, Union, Literal
 from datetime import date, datetime
+import pytz
 dt_date = date 
 
 # في بداية ملف models/schema.py
@@ -700,11 +701,11 @@ class LegacyBiomarkerEntry(BaseModel):
 class LegacyRiskPredictionOutput(BaseModel):
     diabetes_risk: float
     hypertension_risk: float
-    derived_features: DerivedFeatures
+    derived_features: LegacyDerivedFeatures # ✅ Corrected
     input_values: dict
-    top_diabetes_features: List[TopFeatures]
-    top_hypertension_features: List[TopFeatures]
-    biomarker_chart_data: Optional[List[BiomarkerEntry]] = None
+    top_diabetes_features: List[LegacyTopFeatures] # ✅ Corrected
+    top_hypertension_features: List[LegacyTopFeatures] # ✅ Corrected
+    biomarker_chart_data: Optional[List[LegacyBiomarkerEntry]] = None # ✅ Corrected
 
 class LegacyRiskAssessmentEntry(BaseModel):
     risk_category: str
