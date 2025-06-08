@@ -85,14 +85,14 @@ def get_user_info_by_qr(user_id: str):
 
     user_data = user_doc.to_dict()
 
-    def get_collection_fallback(primary_path, fallback_field):
+    # استبدل الدالة القديمة بهذه
+    def get_collection(path):
+        """Fetches all documents from a given collection path."""
         try:
-            data = [doc.to_dict() for doc in primary_path.stream()]
-            if data:
-                return data
-        except:
-            pass
-        return user_data.get(fallback_field, [])
+            return [doc.to_dict() for doc in path.stream()]
+        except Exception as e:
+            print(f"Warning: Could not fetch collection at {path.path}. Error: {e}")
+            return []
 
     # ✅ العمليات الجراحية
     user_data["surgeries"] = get_collection_fallback(
