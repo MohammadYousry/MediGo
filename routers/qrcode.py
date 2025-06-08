@@ -98,7 +98,11 @@ def get_user_info_by_qr(user_id: str):
     user_data["surgeries"] = get_collection(db.collection("Users").document(user_id).collection("surgeries"))
     user_data["radiology"] = get_collection(db.collection("Users").document(user_id).collection("ClinicalIndicators").document("radiology").collection("Records"))
     user_data["biomarkers"] = get_collection(db.collection("Users").document(user_id).collection("ClinicalIndicators").document("bloodbiomarkers").collection("Records"))
+    # ✅ الحساسية
     user_data["allergies"] = get_collection(db.collection("Users").document(user_id).collection("allergies"))
+    # ✅ سنضيف أمر طباعة هنا لنرى ماذا قرأ الكود بالضبط
+    print(f"DEBUG_ALLERGY_READ: Fetched allergies for user '{user_id}'. Data: {user_data['allergies']}")
+    # ✅ الأدوية
     user_data["medications"] = get_collection(db.collection("Users").document(user_id).collection("medications"))
     user_data["emergency_contacts"] = get_collection(db.collection("Users").document(user_id).collection("emergency_contacts"))
     user_data["diagnoses"] = get_collection(db.collection("Users").document(user_id).collection("diagnoses"))
