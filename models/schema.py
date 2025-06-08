@@ -288,7 +288,11 @@ class FamilyHistoryEntry(FamilyHistoryBase, BaseRecord): # BaseRecord already ha
     pass
 
 # --- EmergencyContact Models ---
-class EmergencyContactBase(BaseModel): name: str; relationship: str; phone_number: str
+class EmergencyContactBase(BaseModel):
+    name: str
+    relationship: str
+    phone_number: str
+    added_by: str  # ✅ أضف هذا السطر
 class EmergencyContactCreate(EmergencyContactBase): pass
 class EmergencyContact(EmergencyContactBase, BaseRecord): # BaseRecord already has Config
     pass
