@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Request
-from models.schema import EmergencyContact, EmergencyContactCreate
+from models.schema import EmergencyContactCreate, LegacyEmergencyContact
 from firebase_config import db
 from datetime import datetime
 import pytz
@@ -22,6 +22,25 @@ def add_contact(national_id: str, entry: EmergencyContactCreate):
 
     user_ref.collection("emergency_contacts").document(record_id).set(data)
     return {"message": "Emergency contact added", "record_id": record_id}
+
+# --- ✅ Legacy Compatibility Endpoint (The Adapter) ---
+
+@router.post("/legacy/{national_id}", tags=["Legacy Compatibility"])
+def add_legacy_contact(national_id: str, legacy_entry: LegacyEmergencyContact):
+    """Accepts Clara's old emergency contact model and translates it."""
+    print("✅ Legacy emergency contact endpoint hit. Translating...")
+    
+    # --- Translation Stage ---
+    new_data = {
+        "name": legacy_entry.full_name,
+        "relationship": legacy_entry.relationship,
+        "phone_number": legacy_entry.phone_number,
+        "added_by": "patient" # Clara's model doesn't have this, so we add a default
+    }
+    new_entry = EmergencyContactCreate(**new_data)
+    
+    # --- Call Your Original, Robust Function ---
+    return add_contact(national_id, new_entry)
 
 # ---------------------- Get All Emergency Contacts ----------------------
 @router.get("/{national_id}")
