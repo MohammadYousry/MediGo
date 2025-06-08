@@ -77,16 +77,18 @@ class UserResponse(UserBase):
     age: Optional[int] = None
     is_active: Optional[bool] = True
 
+
 class UserEmergencyInfo(UserBase):
     age: Optional[int] = None
-    # Add all the missing fields that are fetched in your qrcode.py router
     surgeries: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
     radiology: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
     biomarkers: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
     hypertension_stage: Optional[str] = None
     medications: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
     emergency_contacts: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
-    profile_photo: Optional[str] = None # Added for the profile photo fix
+    profile_photo: Optional[str] = None
+    diagnoses: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
+    family_history: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
 # --- Doctor Specific Models ---
 class DoctorsBase(UserBase):
     specialization: Optional[str] = Field(None, description="Doctor's specialization")
