@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Request
-from models.schema import EmergencyContact
+from models.schema import EmergencyContact, EmergencyContactCreate
 from firebase_config import db
 from datetime import datetime
 import pytz
@@ -9,7 +9,7 @@ egypt_tz = pytz.timezone("Africa/Cairo")
 
 # ---------------------- Add Emergency Contact ----------------------
 @router.post("/{national_id}")
-def add_contact(national_id: str, entry: EmergencyContact):
+def add_contact(national_id: str, entry: EmergencyContactCreate):
     user_ref = db.collection("Users").document(national_id)
     if not user_ref.get().exists:
         raise HTTPException(status_code=404, detail="User not found")
@@ -35,7 +35,7 @@ def get_contacts(national_id: str):
 
 # ---------------------- Update Emergency Contact ----------------------
 @router.put("/{national_id}/{record_id}")
-def update_contact(national_id: str, record_id: str, entry: EmergencyContact):
+def update_contact(national_id: str, record_id: str, entry: EmergencyContactCreate):
     record_ref = db.collection("Users").document(national_id) \
         .collection("emergency_contacts").document(record_id)
 
