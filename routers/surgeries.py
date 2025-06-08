@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Request
-from models.schema import SurgeryEntry, SurgeryCreate
+from models.schema import SurgeryEntry, SurgeryCreate, LegacySurgeryEntry
 from firebase_config import db
 from datetime import datetime, date as dt_date
 import pytz
@@ -27,10 +27,15 @@ def add_surgery(national_id: str, entry: SurgeryCreate):
     user_ref.collection("surgeries").document(record_id).set(data)
     return {"message": "Surgery entry added", "record_id": record_id}
 
-# ✅ Legacy Compatibility Endpoint
-@router.post("/legacy/", tags=["Legacy Compatibility"])
+# --- ✅ Legacy Compatibility Endpoint (The Adapter) ---
+
+# ✅ تم تصحيح المسار هنا
+@router.post("/legacy/{national_id}", tags=["Legacy Compatibility"])
 def add_legacy_surgery(national_id: str, legacy_entry: LegacySurgeryEntry):
-    print("✅ Legacy surgery endpoint hit.")
+    """Accepts Clara's old surgery model, translates it, and calls the new endpoint."""
+    print("✅ Legacy surgery endpoint hit. Translating...")
+    
+    # --- Translation Stage ---
     new_data = {
         "surgery_name": legacy_entry.procedure_name,
         "doctor_name": legacy_entry.surgeon_name,
@@ -39,6 +44,8 @@ def add_legacy_surgery(national_id: str, legacy_entry: LegacySurgeryEntry):
         "added_by": legacy_entry.added_by or "hospital_default"
     }
     new_entry = SurgeryCreate(**new_data)
+    
+    # --- Call Your Original, Robust Function ---
     return add_surgery(national_id, new_entry)
 
 
