@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Request
-from models.schema import Allergy
+from models.schema import Allergy # Make sure the model is correct
 from datetime import datetime
 from firebase_config import db
 from uuid import uuid4
@@ -14,17 +14,15 @@ def add_allergy(national_id: str, entry: Allergy):
     if not user_ref.get().exists:
         raise HTTPException(status_code=404, detail="User not found")
 
-    timestamp_id = datetime.now(egypt_tz).strftime("%Y-%m-%d %H:%M:%S")
     record_id = str(uuid4())
-
     data = entry.dict()
-    data["date"] = timestamp_id
-    data["added_by"] = entry.added_by
+    data["timestamp"] = datetime.now(egypt_tz).isoformat()
+    data["id"] = record_id
 
+    # ✅ Using the correct, simple path
     user_ref.collection("allergies").document(record_id).set(data)
 
     return {"message": "Allergy added", "id": record_id}
-
 
 @router.get("/{national_id}")
 def get_allergies(national_id: str):
@@ -32,54 +30,35 @@ def get_allergies(national_id: str):
     if not user_ref.get().exists:
         raise HTTPException(status_code=404, detail="User not found")
 
-    docs = user_ref \
-        .collection("ClinicalIndicators") \
-        .document("allergies") \
-        .collection("Records") \
-        .stream()
-
-    return [{**doc.to_dict(), "id": doc.id} for doc in docs]
-
+    # ✅ Using the correct, simple path
+    docs = user_ref.collection("allergies").stream()
+    return [doc.to_dict() for doc in docs]
 
 @router.put("/{national_id}/{record_id}")
 def update_allergy(national_id: str, record_id: str, entry: Allergy):
-    allergy_ref = db.collection("Users") \
-        .document(national_id) \
-        .collection("ClinicalIndicators") \
-        .document("allergies") \
-        .collection("Records") \
-        .document(record_id)
-
+    # ✅ Using the correct, simple path
+    allergy_ref = db.collection("Users").document(national_id).collection("allergies").document(record_id)
     doc = allergy_ref.get()
+
     if not doc.exists:
         raise HTTPException(status_code=404, detail="Record not found")
-
     if doc.to_dict().get("added_by") != entry.added_by:
         raise HTTPException(status_code=403, detail="You are not authorized to update this record")
 
     updated_data = entry.dict()
-    updated_data["date"] = datetime.now(egypt_tz).strftime("%Y-%m-%d %H:%M:%S")
-
+    updated_data["timestamp"] = datetime.now(egypt_tz).isoformat()
     allergy_ref.update(updated_data)
-
     return {"message": "Allergy updated", "id": record_id}
-
 
 @router.delete("/{national_id}/{record_id}")
 def delete_allergy(national_id: str, record_id: str, request: Request):
     added_by = request.query_params.get("added_by")
-
-    allergy_ref = db.collection("Users") \
-        .document(national_id) \
-        .collection("ClinicalIndicators") \
-        .document("allergies") \
-        .collection("Records") \
-        .document(record_id)
-
+    # ✅ Using the correct, simple path
+    allergy_ref = db.collection("Users").document(national_id).collection("allergies").document(record_id)
     doc = allergy_ref.get()
+
     if not doc.exists:
         raise HTTPException(status_code=404, detail="Record not found")
-
     if doc.to_dict().get("added_by") != added_by:
         raise HTTPException(status_code=403, detail="You are not authorized to delete this record")
 
