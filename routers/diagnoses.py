@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from models.schema import DiagnosisEntry
+from models.schema import DiagnosisEntry, DiagnosisCreate
 from firebase_config import db
 from datetime import datetime
 from uuid import uuid4
@@ -11,7 +11,7 @@ egypt_tz = pytz.timezone("Africa/Cairo")
 
 # ---------------------- Add Diagnosis ----------------------
 @router.post("/{national_id}")
-def add_diagnosis(national_id: str, entry: DiagnosisEntry):
+def add_diagnosis(national_id: str, entry: DiagnosisCreate):
     user_ref = db.collection("Users").document(national_id)
     if not user_ref.get().exists:
         raise HTTPException(status_code=404, detail="User not found")
@@ -43,7 +43,7 @@ def get_diagnoses(national_id: str):
 
 # ---------------------- Update Diagnosis ----------------------
 @router.put("/{national_id}/{record_id}")
-def update_diagnosis(national_id: str, record_id: str, entry: DiagnosisEntry):
+def update_diagnosis(national_id: str, record_id: str, entry: DiagnosisCreate):
     record_ref = db.collection("Users").document(national_id).collection("diagnoses").document(record_id)
     doc = record_ref.get()
 
