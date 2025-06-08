@@ -165,18 +165,25 @@ def get_user_info_by_qr(user_id: str):
         db.collection("Users").document(user_id).collection("emergency_contacts"), "emergency_contacts"
     )
 
-    # ✅ صورة البروفايل
-    user_data["profile_photo"] = (
-        user_data.get("profile_photo") or
-        user_data.get("profile_picture_url") or
-        user_data.get("profile_image") or
-        "https://medigo-eg.netlify.app/medi_go_logo.png"
-    )
+    # In routers/qrcode.py at the end of the get_user_info_by_qr function
 
-    return {
-        "user_id": user_id,
-        "user_info": user_data
-    }
+    # ... (all the data fetching logic remains the same)
+
+    # ✅ صورة البروفايل (Refined Logic)
+    # This ensures we get a valid URL or the default one.
+    user_data["profile_photo"] = (
+        user_data.get("profile_picture_url") or
+        user_data.get("profile_photo") or
+        user_data.get("profile_image") or
+        "https://medigo-eg.netlify.app/medi_go_logo.png"  # Fallback
+    )
+    
+    # The final returned object should be structured to match QRCodeWithUserInfoResponse
+    # The key is to pass the user_data dictionary directly to the user_info field.
+    return QRCodeWithUserInfoResponse(
+        user_id=user_id,
+        user_info=user_data 
+    )
 
 
 
