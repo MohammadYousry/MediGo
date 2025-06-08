@@ -37,28 +37,6 @@ def add_medication(national_id: str, entry: MedicationCreate):
     user_ref.collection("medications").document(timestamp_id).set(medication_data)
     return {"message": "Medication added", "doc_id": timestamp_id}
 
-# ✅ Legacy Compatibility Endpoint
-@router.post("/legacy/", tags=["Legacy Compatibility"])
-def add_legacy_medication(national_id: str, legacy_entry: LegacyMedicationEntry):
-    """Accepts Clara's old medication model and translates it."""
-    print("✅ Legacy medication endpoint hit.")
-    
-    # --- Translation ---
-    new_med_data = {
-        "name": legacy_entry.trade_name,
-        "dosage": legacy_entry.dosage,
-        "frequency": legacy_entry.frequency,
-        "start_date": str(legacy_entry.start_date) if legacy_entry.start_date else None,
-        "end_date": str(legacy_entry.end_date) if legacy_entry.end_date else None,
-        "current": legacy_entry.current,
-        "reason": legacy_entry.notes,
-        "added_by": legacy_entry.added_by
-    }
-    new_entry_to_create = MedicationCreate(**new_med_data)
-    
-    # --- Call original function ---
-    return add_medication(national_id, new_entry_to_create)
-
 @router.get("/{national_id}")
 def get_medications(national_id: str):
     user_ref = db.collection("Users").document(national_id)
