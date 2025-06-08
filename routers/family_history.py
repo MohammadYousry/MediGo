@@ -40,10 +40,19 @@ def get_family_history(national_id: str):
 @router.put("/{national_id}/{record_id}")
 def update_family_history(national_id: str, record_id: str, entry: FamilyHistoryEntry):
     user_ref = db.collection("Users").document(national_id)
+    # In family_history.py, inside update_family_history function
+
     record_ref = user_ref.collection("family_history").document(record_id)
 
-    if not record_ref.get().exists:
+    # Add these lines for authorization check
+    existing_doc = record_ref.get()
+    if not existing_doc.exists:
         raise HTTPException(status_code=404, detail="Record not found")
+
+    if existing_doc.to_dict().get("added_by") != entry.added_by:
+        raise HTTPException(status_code=403, detail="You are not authorized to update this record.")
+
+    # ... rest of the function
 
     data = entry.dict()
     data["id"] = record_id
