@@ -2,6 +2,21 @@ from pydantic import BaseModel, EmailStr, Field
 from typing import List, Optional, Dict, Any, Union
 from datetime import date, datetime
 dt_date = date 
+
+# في بداية ملف models/schema.py
+# ... بعد كل سطور الـ import
+
+# --- ADD THIS ENTIRE BLOCK ---
+# ----------------- Literal Types from Clara's Schema -----------------
+AllowedRoles = Literal["patient", "hospital", "laboratory", "radiology", "pharmacy", "clinic", "visitor"]
+Gender = Literal["male", "female"]  # <--- هذا هو تعريف 'Gender' الذي سيحل المشكلة
+BloodGroup = Literal["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]
+MaritalStatus = Literal["single", "married", "divorced", "widowed"]
+AgeGroup = Literal["Young", "Middle-aged", "Older"]
+SmokerStatus = Literal["Non-smoker", "Light smoker", "Moderate smoker", "Heavy smoker"]
+BpCategory = Literal["Low", "Normal", "Elevated", "Stage 1", "Stage 2"]
+BmiCategory = Literal["Underweight", "Normal", "Overweight", "Obese"]
+# --------------------------------------------------------------------
 # --- Helper Functions (Placeholders) ---
 def fetch_patient_name(patient_national_id: str, db_session) -> Optional[str]:
     print(f"[Placeholder] fetch_patient_name called for {patient_national_id}")
