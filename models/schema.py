@@ -220,6 +220,7 @@ class MedicationBase(BaseInput):
     end_date: Optional[str] = None
     reason: Optional[str] = None
     added_by: str  # ✅ أضف هذا السطر
+    current: Optional[bool] = False
 
 class MedicationCreate(MedicationBase):
     pass
