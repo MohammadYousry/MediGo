@@ -1,5 +1,6 @@
 from datetime import datetime, date as dt_date
 from fastapi import APIRouter, HTTPException, Request
+# Make sure both models are imported
 from models.schema import MedicationEntry, MedicationCreate
 from firebase_config import db
 import pytz
@@ -13,7 +14,6 @@ def add_medication(national_id: str, entry: MedicationCreate):
     if not user_ref.get().exists:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # ✅ Require start_date if medication is currently taken
     if entry.current and not entry.start_date:
         raise HTTPException(
             status_code=400,
@@ -23,19 +23,17 @@ def add_medication(national_id: str, entry: MedicationCreate):
     medication_data = entry.dict()
     timestamp_id = datetime.now(egypt_tz).strftime("%Y-%m-%d %H:%M:%S")
 
-    # ✅ Convert datetime.date to string for Firestore
+    # This date conversion logic is still useful
     if isinstance(entry.start_date, dt_date):
         medication_data["start_date"] = entry.start_date.isoformat()
     if isinstance(entry.end_date, dt_date):
         medication_data["end_date"] = entry.end_date.isoformat()
 
-    # ✅ Remove end_date if certain_duration is False
-    if not entry.certain_duration:
-        medication_data.pop("end_date", None)
-        if not entry.current:
-            medication_data.pop("start_date", None)
-
+    # ❌ The problematic block of code has been REMOVED from here.
+    
     medication_data["timestamp"] = timestamp_id
+    # Let's use the timestamp as the ID for medications as well for consistency
+    medication_data["id"] = timestamp_id
 
     user_ref.collection("medications").document(timestamp_id).set(medication_data)
     return {"message": "Medication added", "doc_id": timestamp_id}
@@ -61,7 +59,6 @@ def update_medication(national_id: str, record_id: str, entry: MedicationCreate)
     if doc.to_dict().get("added_by") != entry.added_by:
         raise HTTPException(status_code=403, detail="You are not authorized to update this record")
 
-    # ✅ Require start_date if current
     if entry.current and not entry.start_date:
         raise HTTPException(
             status_code=400,
@@ -70,19 +67,15 @@ def update_medication(national_id: str, record_id: str, entry: MedicationCreate)
 
     updated_data = entry.dict()
 
-    # ✅ Convert dates to strings
     if isinstance(entry.start_date, dt_date):
         updated_data["start_date"] = entry.start_date.isoformat()
     if isinstance(entry.end_date, dt_date):
         updated_data["end_date"] = entry.end_date.isoformat()
-
-    if not entry.certain_duration:
-        updated_data.pop("end_date", None)
-        if not entry.current:
-            updated_data.pop("start_date", None)
-
+    
+    # ❌ The problematic block of code has been REMOVED from here as well.
+    
+    # Use update() instead of set() for partial updates
     med_ref.update(updated_data)
-    updated_data["timestamp"] = datetime.now(egypt_tz).strftime("%Y-%m-%d %H:%M:%S")
 
     return {"message": "Medication updated", "id": record_id}
 
