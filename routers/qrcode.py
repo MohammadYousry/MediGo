@@ -95,25 +95,7 @@ def get_user_info_by_qr(user_id: str):
             return []
 
     # ✅ العمليات الجراحية
-    user_data["surgeries"] = get_collection_fallback(
-        db.collection("Users").document(user_id).collection("surgeries"), "surgeries"
-    )
-
-    # ✅ الأشعة
-    user_data["radiology"] = get_collection_fallback(
-        db.collection("Users").document(user_id)
-        .collection("ClinicalIndicators")
-        .document("radiology")
-        .collection("Records"), "radiology"
-    )
-
-    # ✅ التحاليل
-    user_data["biomarkers"] = get_collection_fallback(
-        db.collection("Users").document(user_id)
-        .collection("ClinicalIndicators")
-        .document("bloodbiomarkers")
-        .collection("Records"), "biomarkers"
-    )
+    
 
     # ✅ ضغط الدم
     bp_docs = list(db.collection("Users").document(user_id)
@@ -147,23 +129,13 @@ def get_user_info_by_qr(user_id: str):
         else:
             user_data["hypertension_stage"] = "غير متوفر"
 
-    # ✅ الحساسية
-    user_data["allergies"] = get_collection_fallback(
-        db.collection("Users").document(user_id).collection("allergies"), "allergies"
-    )
-
-    # ✅ الأدوية
-    user_data["medications"] = get_collection_fallback(
-        db.collection("Users").document(user_id).collection("medications"), "medications"
-    )
+    
 
     # ✅ الأمراض المزمنة
     user_data["chronic_diseases"] = user_data.get("chronic_diseases", [])
 
     # ✅ جهات الطوارئ
-    user_data["emergency_contacts"] = get_collection_fallback(
-        db.collection("Users").document(user_id).collection("emergency_contacts"), "emergency_contacts"
-    )
+    
     # In routers/qrcode.py, inside get_user_info_by_qr
 
     # ... (after fetching emergency_contacts)
@@ -171,14 +143,31 @@ def get_user_info_by_qr(user_id: str):
     # --- ADD THESE TWO BLOCKS ---
 
     # ✅ التشخيصات
-    user_data["diagnoses"] = get_collection_fallback(
-        db.collection("Users").document(user_id).collection("diagnoses"), "diagnoses"
-    )
+    # In get_user_info_by_qr function:
 
-    # ✅ التاريخ العائلي
-    user_data["family_history"] = get_collection_fallback(
-        db.collection("Users").document(user_id).collection("family_history"), "family_history"
-    )
+# ✅ العمليات الجراحية
+    user_data["surgeries"] = get_collection(db.collection("Users").document(user_id).collection("surgeries"))
+
+# ✅ الأشعة
+    user_data["radiology"] = get_collection(db.collection("Users").document(user_id).collection("ClinicalIndicators").document("radiology").collection("Records"))
+
+# ✅ التحالليل
+    user_data["biomarkers"] = get_collection(db.collection("Users").document(user_id).collection("ClinicalIndicators").document("bloodbiomarkers").collection("Records"))
+
+# ✅ الحساسية
+    user_data["allergies"] = get_collection(db.collection("Users").document(user_id).collection("allergies"))
+
+# ✅ الأدوية
+    user_data["medications"] = get_collection(db.collection("Users").document(user_id).collection("medications"))
+
+# ✅ جهات الطوارئ
+    user_data["emergency_contacts"] = get_collection(db.collection("Users").document(user_id).collection("emergency_contacts"))
+
+# ✅ التشخيصات
+    user_data["diagnoses"] = get_collection(db.collection("Users").document(user_id).collection("diagnoses"))
+
+# ✅ التاريخ العائلي
+    user_data["family_history"] = get_collection(db.collection("Users").document(user_id).collection("family_history"))
     
     # ... (before profile_photo logic)
     # In routers/qrcode.py at the end of the get_user_info_by_qr function
