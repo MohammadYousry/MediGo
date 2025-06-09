@@ -1,154 +1,151 @@
-from fastapi import APIRouter, HTTPException, File, Form, UploadFile
-from fastapi.responses import FileResponse
-import os
-import shutil
-from firebase_config import db
+from fastapi import APIRouter, HTTPException, Form
 from datetime import datetime
-
+import os
+import qrcode
+from firebase_admin import firestore
+from firebase_config import db, bucket
 from models.schema import (
-    QRCodeCreate,
     QRCodeResponse,
     QRCodeWithUserInfoResponse,
-    UserEmergencyInfo,
-    calculate_age
+    UserEmergencyInfo
 )
 
 router = APIRouter(prefix="/qrcode", tags=["QR Codes"])
 
+# 📁 مرجع Firestore لمستند QR
 def get_qr_code_doc_ref(user_id: str):
     return db.collection("Users").document(user_id).collection("QRCodeAccess").document("single_qr_code")
 
-async def save_uploaded_image(user_id: str, file: UploadFile) -> str:
+# 🧠 توليد صورة QR ورفعها إلى Firebase Storage
+def generate_qr_image(user_id: str) -> str:
     try:
-        folder = f"./qr_images/{user_id}"
-        os.makedirs(folder, exist_ok=True)
-        file_name = f"{user_id}_qrcode.png"
-        file_path = os.path.join(folder, file_name)
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        return f"./qr_images/{user_id}/{file_name}".replace("\\", "/")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to save image: {str(e)}")
+        qr_url = f"https://medigo-eg.netlify.app/card/emergency_card.html?user_id={user_id}"
+        local_folder = f"./qr_images/{user_id}"
+        os.makedirs(local_folder, exist_ok=True)
+        local_file_path = os.path.join(local_folder, f"{user_id}_qrcode.png")
 
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_H,
+            box_size=10,
+            border=4
+        )
+        qr.add_data(qr_url)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        img.save(local_file_path)
+
+        blob = bucket.blob(f"qr_codes/{user_id}_qrcode.png")
+        blob.upload_from_filename(local_file_path)
+        blob.make_public()
+
+        os.remove(local_file_path)
+        return blob.public_url
+
+    except Exception as e:
+        print(f"❌ [generate_qr_image] Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"QR generation failed: {str(e)}")
+
+# 🌐 إنشاء QR جديد
 @router.post("/", response_model=QRCodeResponse)
 async def create_qr_code(
     user_id: str = Form(...),
-    expiration_date: str = Form(...),
-    qr_image: UploadFile = File(...)
+    expiration_date: str = Form(...)
 ):
     try:
-        saved_image_path = await save_uploaded_image(user_id, qr_image)
-        now_timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+        user_doc = db.collection("Users").document(user_id).get()
+        if not user_doc.exists:
+            raise HTTPException(status_code=404, detail="User does not exist")
 
-        image_url = f"https://medigo.onrender.com/card/emergency_card.html?user_id={user_id}"
+        image_url = generate_qr_image(user_id)
+        now_timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+        web_url = f"https://medigo-eg.netlify.app/card/emergency_card.html?user_id={user_id}"
 
         qr_data_to_store = {
             "user_id": user_id,
             "last_accessed": now_timestamp,
             "expiration_date": expiration_date,
-            "qr_image": saved_image_path,
-            "qr_data": f"{user_id}|{now_timestamp}",
+            "qr_image": image_url,
+            "qr_data": web_url,
             "image_url": image_url
         }
 
-        doc_ref = get_qr_code_doc_ref(user_id)
-        doc_ref.set(qr_data_to_store)
-
+        get_qr_code_doc_ref(user_id).set(qr_data_to_store)
         return QRCodeResponse(**qr_data_to_store)
+
     except Exception as e:
-        print(f"\u274c [create_qr_code] Error: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        print(f"❌ [create_qr_code] Error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error creating QR code: {str(e)}")
 
-async def fetch_subcollection_data(user_id: str, subcollection: str):
-    try:
-        docs = db.collection("Users").document(user_id).collection(subcollection).stream()
-        return [doc.to_dict() for doc in docs]
-    except Exception as e:
-        print(f"Error fetching {subcollection}: {e}")
-        return []
-
 @router.get("/{user_id}", response_model=QRCodeWithUserInfoResponse)
-async def get_qr_code(user_id: str):
-    try:
-        qr_doc_ref = get_qr_code_doc_ref(user_id)
-        qr_doc = qr_doc_ref.get()
+def get_user_info_by_qr(user_id: str):
+    user_doc = db.collection("Users").document(user_id).get()
+    if not user_doc.exists:
+        raise HTTPException(status_code=404, detail="User not found")
 
-        if not qr_doc.exists:
-            raise HTTPException(status_code=404, detail="QR Code data not found for this user in QRCodeAccess.")
+    user_data = user_doc.to_dict()
 
-        qr_specific_data = qr_doc.to_dict()
+    # ✅ الدالة الجديدة والمحسّنة
+    def get_collection(path):
+        """Fetches all documents from a given collection path."""
+        try:
+            return [doc.to_dict() for doc in path.stream()]
+        except Exception as e:
+            print(f"Warning: Could not fetch collection at {path.path}. Error: {e}")
+            return []
 
-        user_doc_ref = db.collection("Users").document(user_id)
-        user_doc = user_doc_ref.get()
-        user_emergency_info_data = None
+    # ✅ استدعاءات نظيفة ومباشرة لكل البيانات من الـ sub-collections
+    user_data["surgeries"] = get_collection(db.collection("Users").document(user_id).collection("surgeries"))
+    user_data["radiology"] = get_collection(db.collection("Users").document(user_id).collection("ClinicalIndicators").document("radiology").collection("Records"))
+    user_data["biomarkers"] = get_collection(db.collection("Users").document(user_id).collection("ClinicalIndicators").document("bloodbiomarkers").collection("Records"))
+    # ✅ الحساسية
+    user_data["allergies"] = get_collection(db.collection("Users").document(user_id).collection("allergies"))
+    # ✅ سنضيف أمر طباعة هنا لنرى ماذا قرأ الكود بالضبط
+    print(f"DEBUG_ALLERGY_READ: Fetched allergies for user '{user_id}'. Data: {user_data['allergies']}")
+    # ✅ الأدوية
+    user_data["medications"] = get_collection(db.collection("Users").document(user_id).collection("medications"))
+    user_data["emergency_contacts"] = get_collection(db.collection("Users").document(user_id).collection("emergency_contacts"))
+    user_data["diagnoses"] = get_collection(db.collection("Users").document(user_id).collection("diagnoses"))
+    user_data["family_history"] = get_collection(db.collection("Users").document(user_id).collection("family_history"))
+    
+    # ✅ الأمراض المزمنة (من المستند الرئيسي)
+    user_data["chronic_diseases"] = user_data.get("chronic_diseases", [])
 
-        if user_doc.exists:
-            user_main_data = user_doc.to_dict()
-            calculated_age = calculate_age(user_main_data.get("birthdate"))
+    # ✅ منطق ضغط الدم (بقي كما هو)
+    bp_docs = list(db.collection("Users").document(user_id)
+        .collection("ClinicalIndicators")
+        .document("Hypertension")
+        .collection("Records")
+        .order_by("timestamp", direction=firestore.Query.DESCENDING)
+        .limit(1)
+        .stream())
 
-            # Fetch subcollections
-            allergies = await fetch_subcollection_data(user_id, "allergies")
-            medications = await fetch_subcollection_data(user_id, "medications")
-            diagnoses = await fetch_subcollection_data(user_id, "diagnoses")
-            surgeries = await fetch_subcollection_data(user_id, "surgeries")
-            radiology = await fetch_subcollection_data(user_id, "radiology")
-            bloodbiomarkers = await fetch_subcollection_data(user_id, "bloodbiomarkers")
-            emergency_contacts = await fetch_subcollection_data(user_id, "emergency_contacts")
+    user_data["hypertension_stage"] = "غير متوفر" # قيمة افتراضية
+    if bp_docs:
+        latest_bp = bp_docs[0].to_dict()
+        systolic = latest_bp.get("systolic")
+        diastolic = latest_bp.get("diastolic")
 
-            hypertension_ref = user_doc_ref.collection("ClinicalIndicators").document("Hypertension")
-            hypertension_doc = hypertension_ref.get()
-            hypertension_stage = hypertension_doc.to_dict().get("hypertension_stage", "غير متوفر") if hypertension_doc.exists else "غير متوفر"
+        def classify_bp_stage(sys, dia):
+            if sys >= 180 or dia >= 120: return "Stage 3 - Hypertensive Crisis"
+            if sys >= 140 or dia >= 90: return "Stage 2 - Hypertension"
+            if sys >= 130 or dia >= 80: return "Stage 1 - Hypertension"
+            if sys >= 120 and dia < 80: return "Elevated"
+            return "Normal"
 
-            user_emergency_info_data = UserEmergencyInfo(
-                full_name=user_main_data.get("full_name"),
-                national_id=user_main_data.get("national_id", user_id),
-                gender=user_main_data.get("gender"),
-                birthdate=user_main_data.get("birthdate"),
-                phone_number=user_main_data.get("phone_number"),
-                address=user_main_data.get("address"),
-                city=user_main_data.get("city"),
-                region=user_main_data.get("region"),
-                blood_type=user_main_data.get("blood_type") or user_main_data.get("blood_group"),
-                profile_picture_url=user_main_data.get("profile_picture_url") or user_main_data.get("profile_photo"),
-                age=calculated_age,
-                emergency_contacts=emergency_contacts,
-                allergies=allergies,
-                chronic_diseases=diagnoses,
-                medications=medications,
-                surgeries=surgeries,
-                radiology=radiology,
-                bloodbiomarkers=bloodbiomarkers,
-                hypertension_stage=hypertension_stage
-            )
+        if systolic and diastolic:
+            user_data["hypertension_stage"] = classify_bp_stage(systolic, diastolic)
 
-        return QRCodeWithUserInfoResponse(
-            user_id=qr_specific_data.get("user_id", user_id),
-            last_accessed=qr_specific_data.get("last_accessed"),
-            expiration_date=qr_specific_data.get("expiration_date"),
-            qr_image=qr_specific_data.get("qr_image"),
-            image_url=qr_specific_data.get("image_url"),
-            user_info=user_emergency_info_data
-        )
-
-    except HTTPException as http_exc:
-        raise http_exc
-    except Exception as e:
-        print(f"\u274c [get_qr_code] Unexpected error: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
-
-@router.get("/images/{user_id}/{file_name}", response_class=FileResponse)
-async def serve_image(user_id: str, file_name: str):
-    try:
-        image_file_path = os.path.join("qr_images", user_id, file_name)
-
-        if not os.path.exists(image_file_path):
-            raise HTTPException(status_code=404, detail="Image not found")
-
-        return FileResponse(image_file_path, media_type="image/png")
-    except Exception as e:
-        print(f"\u274c [serve_image] Error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error serving image: {str(e)}")
+    # ✅ صورة البروفايل
+    user_data["profile_photo"] = (
+        user_data.get("profile_picture_url") or
+        user_data.get("profile_photo") or
+        user_data.get("profile_image") or
+        "https://medigo-eg.netlify.app/medi_go_logo.png"  # Fallback
+    )
+    
+    # ✅ إرجاع البيانات باستخدام النموذج الصحيح
+    return QRCodeWithUserInfoResponse(
+        user_id=user_id,
+        user_info=user_data 
+    )

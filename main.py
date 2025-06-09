@@ -2,11 +2,16 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.openapi.docs import get_swagger_ui_html
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 import secrets
+import logging
 
-print("Testing sync")
+# ✅ Logging بدل من print
+logging.basicConfig(level=logging.INFO)
+logging.info("✅ FastAPI MediGO backend is starting...")
 
+# ✅ تأكد من تحميل Firebase Config
+import firebase_config
 
 # === Routers ===
 from routers import (
@@ -77,6 +82,14 @@ def verify_docs_credentials(credentials: HTTPBasicCredentials = Depends(security
 @app.get("/docs", include_in_schema=False)
 def custom_swagger_ui(credentials: bool = Depends(verify_docs_credentials)):
     return get_swagger_ui_html(openapi_url=app.openapi_url, title="MediGO Docs")
+
+# === Custom 404 Error Response ===
+@app.exception_handler(404)
+async def custom_404_handler(request, exc):
+    return JSONResponse(
+        status_code=404,
+        content={"message": "❌ Endpoint not found. Please check the URL."}
+    )
 
 # === Run Locally ===
 if __name__ == "__main__":
