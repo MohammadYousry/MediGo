@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Request
 # ✅ قم باستيراد النموذجين
-from models.schema import FamilyHistoryEntry, FamilyHistoryCreate
+from models.schema import FamilyHistoryCreate, LegacyFamilyHistoryEntry
 from firebase_config import db
 from datetime import datetime
 import pytz
@@ -25,7 +25,25 @@ def add_family_history(national_id: str, entry: FamilyHistoryCreate):
     user_ref.collection("family_history").document(record_id).set(data)
     return {"message": "Family history entry added", "record_id": record_id}
 
+# --- ✅ Legacy Compatibility Endpoint (The Adapter) ---
 
+@router.post("/legacy/{national_id}", tags=["Legacy Compatibility"])
+def add_legacy_family_history(national_id: str, legacy_entry: LegacyFamilyHistoryEntry):
+    """Accepts Clara's old family history model and translates it."""
+    print("✅ Legacy family history endpoint hit. Translating...")
+    
+    # --- Translation Stage ---
+    new_data = {
+        "condition": legacy_entry.disease_name,
+        "relationship": legacy_entry.relative_relationship,
+        "age_at_diagnosis": legacy_entry.age_of_onset,
+        "notes": legacy_entry.notes,
+        "added_by": legacy_entry.added_by or "patient"
+    }
+    new_entry = FamilyHistoryCreate(**new_data)
+    
+    # --- Call Your Original, Robust Function ---
+    return add_family_history(national_id, new_entry)
 # ---------------------- Get All Family History ----------------------
 @router.get("/{national_id}")
 def get_family_history(national_id: str):

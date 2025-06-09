@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from models.schema import DiagnosisEntry, DiagnosisCreate
+from models.schema import DiagnosisEntry, DiagnosisCreate, LegacyDiagnosisEntry
 from firebase_config import db
 from datetime import datetime
 from uuid import uuid4
@@ -40,7 +40,26 @@ def get_diagnoses(national_id: str):
     docs = user_ref.collection("diagnoses").stream()
     return [{**doc.to_dict(), "id": doc.id} for doc in docs]
 
+# --- ✅ Legacy Compatibility Endpoint (The Adapter) ---
 
+# ✅ تم تصحيح المسار هنا
+@router.post("/legacy/{national_id}", tags=["Legacy Compatibility"])
+def add_legacy_diagnosis(national_id: str, legacy_entry: LegacyDiagnosisEntry):
+    """Accepts Clara's old diagnosis model, translates it, and calls the new endpoint."""
+    print("✅ Legacy diagnosis endpoint hit. Translating...")
+    
+    # --- Translation Stage ---
+    new_data = {
+        "diagnosis_description": legacy_entry.disease_name,
+        "diagnosis_date": str(legacy_entry.diagnosis_date),
+        "status": "Chronic" if legacy_entry.is_chronic else "Active",
+        "notes": legacy_entry.details_notes,
+        "added_by": legacy_entry.added_by or "doctor_default"
+    }
+    new_entry = DiagnosisCreate(**new_data)
+    
+    # --- Call Your Original, Robust Function ---
+    return add_diagnosis(national_id, new_entry)
 # ---------------------- Update Diagnosis ----------------------
 @router.put("/{national_id}/{record_id}")
 def update_diagnosis(national_id: str, record_id: str, entry: DiagnosisCreate):

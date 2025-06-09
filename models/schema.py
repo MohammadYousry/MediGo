@@ -1,7 +1,23 @@
-from pydantic import BaseModel, EmailStr, Field
-from typing import List, Optional, Dict, Any, Union
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
+from typing import List, Optional, Dict, Any, Union, Literal
 from datetime import date, datetime
+import pytz
+dt_date = date 
 
+# في بداية ملف models/schema.py
+# ... بعد كل سطور الـ import
+
+# --- ADD THIS ENTIRE BLOCK ---
+# ----------------- Literal Types from Clara's Schema -----------------
+AllowedRoles = Literal["patient", "hospital", "laboratory", "radiology", "pharmacy", "clinic", "visitor"]
+Gender = Literal["male", "female"]  # <--- هذا هو تعريف 'Gender' الذي سيحل المشكلة
+BloodGroup = Literal["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]
+MaritalStatus = Literal["single", "married", "divorced", "widowed"]
+AgeGroup = Literal["Young", "Middle-aged", "Older"]
+SmokerStatus = Literal["Non-smoker", "Light smoker", "Moderate smoker", "Heavy smoker"]
+BpCategory = Literal["Low", "Normal", "Elevated", "Stage 1", "Stage 2"]
+BmiCategory = Literal["Underweight", "Normal", "Overweight", "Obese"]
+# --------------------------------------------------------------------
 # --- Helper Functions (Placeholders) ---
 def fetch_patient_name(patient_national_id: str, db_session) -> Optional[str]:
     print(f"[Placeholder] fetch_patient_name called for {patient_national_id}")
@@ -344,3 +360,377 @@ class RiskPredictionOutput(BaseModel):
     input_values: Dict[str, Any]
     top_diabetes_features: List[TopFeatures]
     top_hypertension_features: List[TopFeatures]
+
+class LegacyUserCreate(BaseModel):
+    national_id: str
+    password: str
+    full_name: str
+    profile_photo: Optional[str] = None
+    birthdate: str = Field(..., example=dt_date.today().isoformat())
+    phone_number: str
+    email:str
+    gender: Gender
+    blood_group: BloodGroup
+    marital_status: MaritalStatus
+    address: str
+    region: str
+    city: str
+    current_smoker: bool = False
+    cigs_per_day: int = 0
+
+    @field_validator("national_id")
+    @classmethod
+    def nid_valid(cls, v): return validate_national_id(v)
+
+    @field_validator("phone_number")
+    @classmethod
+    def phone_valid(cls, v): return validate_phone_number(v)
+
+    @field_validator("cigs_per_day")
+    @classmethod
+    def cigs_logic(cls, v, info):
+        current_smoker = info.data.get("current_smoker")
+        if current_smoker and v <= 0:
+            raise ValueError("Smokers must have cigs_per_day > 0")
+        if not current_smoker and v != 0:
+            raise ValueError("Non-smokers must have cigs_per_day = 0")
+        return v
+
+class LegacyUserResponse(BaseModel):
+    national_id: str
+    password: Optional[str] = None
+    full_name: Optional[str] = None
+    profile_photo: Optional[str] = None
+    birthdate: Optional[str] = None
+    phone_number: Optional[str] = None
+    email: Optional[str] = None
+    gender: Optional[str] = None
+    blood_group: Optional[str] = None
+    marital_status: Optional[str] = None
+    address: Optional[str] = None
+    region: Optional[str] = None
+    city: Optional[str] = None
+    current_smoker: Optional[bool] = None
+    cigs_per_day: Optional[int] = None
+    age: Optional[int] = None
+
+# ----------------- Doctors -----------------
+class LegacyDoctors(BaseModel):
+    doctor_id: str
+    password: str
+    admin_id: str
+    doctor_name: str
+    specialization: str
+    city: str
+    region: str
+    address: str
+    email: EmailStr
+    phone_number: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(egypt_tz))
+
+class LegacyDoctorsCreateRequest(BaseModel):
+    doctor_name: str
+    specialization: str
+    city: str
+    region: str
+    address: str
+    email: EmailStr
+    phone_number: str
+
+# ----------------- Facility -----------------
+class LegacyFacility(BaseModel):
+    facility_id: str
+    password: str
+    admin_id: str
+    facility_name: str
+    city: str
+    region: str
+    address: str
+    role: AllowedRoles
+    access_scope: Dict[str, List[str]]
+    email: EmailStr
+    phone_number: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(egypt_tz))
+
+    @field_validator("phone_number")
+    @classmethod
+    def phone_valid(cls, v): return validate_phone_number(v)
+
+class LegacyFacilityPatientLink(BaseModel):
+    facility_id: str
+    patient_national_id: str
+
+class LegacyFacilityCreateRequest(BaseModel):
+    facility_name: str
+    city: str
+    region: str
+    address: str
+    role: str
+    email: EmailStr
+    phone_number: str
+
+# ----------------- Emergency Contacts -----------------
+class LegacyEmergencyContact(BaseModel):
+    full_name: str
+    relationship: str
+    phone_number: str
+
+    @field_validator("phone_number")
+    @classmethod
+    def phone_valid(cls, v): return validate_phone_number(v)
+
+# ----------------- Doctor Assignments -----------------
+class LegacyDoctorAssignment(BaseModel):
+    doctor_email: str
+    doctor_name: str
+    patient_national_id: str
+    
+# ----------------- QR Code -----------------
+class LegacyQRCodeCreate(BaseModel):
+    user_id: str
+    last_accessed: Optional[datetime] = None
+    expiration_date: datetime
+    qr_image: str
+
+class LegacyQRCodeResponse(QRCodeCreate): pass
+
+class LegacyVisitorQRCode(BaseModel):
+    visitor_name: str
+    qr_code_value: str
+
+# ----------------- Allergies -----------------
+class LegacyAllergy(BaseModel):
+    allergen_name: str
+    reaction_type: str
+    severity: str
+    notes: Optional[str] = None
+    added_by: Optional[str] = None
+
+# ----------------- Diagnosis -----------------
+class LegacyDiagnosisEntry(BaseModel):
+    disease_name: str
+    diagnosis_date: dt_date
+    diagnosed_by: str
+    is_chronic: bool
+    details_notes: Optional[str] = None
+    added_by: Optional[str] = None
+
+# ----------------- Family History -----------------
+class LegacyFamilyHistoryEntry(BaseModel):
+    disease_name: str
+    age_of_onset: int
+    relative_relationship: str
+    notes: Optional[str] = None
+    added_by: Optional[str] = None
+
+# ----------------- Surgeries -----------------
+class LegacySurgeryEntry(BaseModel):
+    procedure_name: str
+    surgeon_name: str
+    surgery_date: dt_date
+    procedure_notes: Optional[str] = None
+    added_by: Optional[str] = None
+
+# ----------------- Radiology -----------------
+class LegacyRadiologyTestInput(BaseModel):
+    radiology_name: str
+    date: Optional[dt_date] = Field(default_factory=dt_date.today)
+    report_notes: Optional[str] = None
+    added_by: str
+
+class LegacyRadiologyTest(RadiologyTestInput):
+    patient_name: Optional[str] = None
+    added_by_name: Optional[str] = None
+    image_validity: Optional[bool] = None
+    image_confidence: Optional[float] = None
+    image_url: Optional[str] = None
+    
+# ----------------- Blood BioMarkers -----------------
+class LegacyTestResultItem(BaseModel):
+    item: str
+    value: str
+    reference_range: Optional[str] = None
+    unit: Optional[str] = None
+    flag: Optional[bool] = False
+
+class LegacyBloodBiomarkerInput(BaseModel):
+    test_name: str
+    date: Optional[dt_date] = Field(default_factory=dt_date.today)
+    results: List[TestResultItem]
+    added_by: str
+
+class LegacyBloodBioMarker(BloodBiomarkerInput):
+    patient_name: Optional[str] = None
+    added_by_name: Optional[str] = None
+   
+    # ----------------- Medications -----------------
+class LegacyMedicationEntry(BaseModel):
+    trade_name: str
+    scientific_name: str
+    dosage: str
+    frequency: str
+    certain_duration: bool
+    start_date: Optional[dt_date] = None
+    end_date: Optional[dt_date] = None
+    current: bool
+    prescribing_doctor: str
+    notes: Optional[str] = None
+    added_by: str
+    bp_medication: Optional[bool] = None
+
+    @model_validator(mode="after")
+    def validate_dates_and_flags(cls, values):
+        certain_duration = values.certain_duration
+        current = values.current
+        start_date = values.start_date
+        end_date = values.end_date
+
+        # ✅ Ensure mutual exclusivity
+        if certain_duration == current:
+            raise ValueError("Only one of 'certain_duration' or 'current' must be True.")
+
+        if certain_duration:
+            if not start_date or not end_date:
+                raise ValueError("Start and end dates must be provided for medications taken for a certain duration.")
+        elif current:
+            if not start_date:
+                raise ValueError("Start date must be provided for currently taken medications.")
+            if end_date is not None:
+                raise ValueError("End date must be left empty for current medications.")
+
+        return values
+
+# ----------------- Hypertension -----------------
+class LegacyHypertensionEntry(BaseModel):
+    sys_value: int
+    dia_value: int
+    added_by: Optional[str] = None
+
+# ----------------- Measurements -----------------
+class LegacyHeightWeightCreate(BaseModel):
+    height: Optional[float] = None
+    weight: Optional[float] = None
+    added_by: Optional[str] = None
+
+    @field_validator("height", "weight")
+    @classmethod
+    def validate_positive(cls, value):
+        if value is not None and value <= 0:
+            raise ValueError("Must be positive")
+        return value
+
+# ----------------- Risk Prediction -----------------
+# ----------------- Radiology -----------------
+class LegacyRadiologyTestInput(BaseModel):
+    radiology_name: str
+    date: Optional[dt_date] = Field(default_factory=dt_date.today)
+    report_notes: Optional[str] = None
+    added_by: str
+
+class LegacyRadiologyTest(RadiologyTestInput):
+    patient_name: Optional[str] = None
+    added_by_name: Optional[str] = None
+    image_validity: Optional[bool] = None
+    image_confidence: Optional[float] = None
+    image_filename: Optional[str] = None 
+
+# ----------------- Blood BioMarkers -----------------
+class LegacyTestResultItem(BaseModel):
+    item: str
+    value: str
+    reference_range: Optional[str] = None
+    unit: Optional[str] = None
+    flag: Optional[bool] = False
+
+class LegacyBloodBiomarkerInput(BaseModel):
+    test_name: str
+    date: Optional[dt_date] = Field(default_factory=dt_date.today)
+    results: List[TestResultItem]
+    added_by: str
+
+class LegacyBloodBioMarker(BloodBiomarkerInput):
+    patient_name: Optional[str] = None
+    added_by_name: Optional[str] = None
+    # ----------------- Medications -----------------
+
+    @model_validator(mode="after")
+    def validate_dates_and_flags(cls, values):
+        certain_duration = values.certain_duration
+        current = values.current
+        start_date = values.start_date
+        end_date = values.end_date
+
+        # ✅ Ensure mutual exclusivity
+        if certain_duration == current:
+            raise ValueError("Only one of 'certain_duration' or 'current' must be True.")
+
+        if certain_duration:
+            if not start_date or not end_date:
+                raise ValueError("Start and end dates must be provided for medications taken for a certain duration.")
+        elif current:
+            if not start_date:
+                raise ValueError("Start date must be provided for currently taken medications.")
+            if end_date is not None:
+                raise ValueError("End date must be left empty for current medications.")
+
+        return values
+
+# ----------------- Risk Assessment -----------------
+class LegacyDerivedFeatures(BaseModel):
+    age_group: AgeGroup
+    smoker_status: SmokerStatus
+    is_obese: bool
+    bp_category: BpCategory
+    bmi_category: BmiCategory
+    bmi: float
+    pulse_pressure: float
+    male_smoker: bool
+    prediabetes_indicator: bool
+    insulin_resistance: bool
+    metabolic_syndrome: bool
+
+class LegacyTopFeatures(BaseModel):
+    feature_name: str
+    contribution_score: float
+    
+class LegacyBiomarkerEntry(BaseModel):
+    item: str
+    value: float
+    unit: Optional[str] = None
+
+class LegacyRiskPredictionOutput(BaseModel):
+    diabetes_risk: float
+    hypertension_risk: float
+    derived_features: LegacyDerivedFeatures # ✅ Corrected
+    input_values: dict
+    top_diabetes_features: List[LegacyTopFeatures] # ✅ Corrected
+    top_hypertension_features: List[LegacyTopFeatures] # ✅ Corrected
+    biomarker_chart_data: Optional[List[LegacyBiomarkerEntry]] = None # ✅ Corrected
+
+class LegacyRiskAssessmentEntry(BaseModel):
+    risk_category: str
+    prediction_date: dt_date
+    risk_score: int
+    primary_risk_factors: str
+    recommended_actions: str
+
+# ----------------- Roles -----------------
+class LegacyRoleCreate(BaseModel):
+    role_name: str
+    role_id: int
+    access_scope: Dict[str, List[str]]
+
+class LegacyRoleResponse(RoleCreate):
+    pass
+
+class LegacyQRCodeCreate(BaseModel):
+    user_id: str
+    last_accessed: str
+    expiration_date: str
+    qr_image: str
+
+class LegacyQRCodeResponse(BaseModel):
+    user_id: str
+    last_accessed: str
+    expiration_date: str
+    qr_image: str

@@ -1,6 +1,8 @@
 from fastapi import APIRouter, HTTPException
 from firebase_config import db
-from models.schema import UserCreate, UserUpdate, UserResponse, calculate_age
+from models.schema import UserCreate, LegacyUserCreate, UserUpdate, UserResponse, calculate_age
+
+
 from datetime import datetime, date
 from typing import List
 
@@ -46,7 +48,7 @@ def create_user(user: UserCreate):
 
     print(f"✅ Created user {user.full_name} ({user.national_id})")
     return {**user.dict(), "age": age}
-
+    
 # -------------------- Update User --------------------
 @router.put("/{national_id}", response_model=dict)
 async def update_user(national_id: str, updated_user: UserUpdate):
@@ -106,3 +108,39 @@ def get_users(name: str = "", national_id: str = ""):
             results.append(user)
 
     return results
+
+# ✅ هذا هو الـ Endpoint الجديد الذي يعمل كمترجم
+@router.post("/legacy/users/", tags=["Legacy Compatibility"], response_model=UserResponse)
+def create_legacy_user(legacy_user: LegacyUserCreate):
+    """
+    This endpoint accepts the OLD user structure from Clara's app,
+    translates it, and then calls our new, robust create_user function.
+    """
+    print("✅ Legacy user endpoint hit. Translating to new format...")
+
+    # --- 1. مرحلة الترجمة ---
+    # نقوم بتحويل البيانات من نموذج كلارا القديم إلى نموذجنا الجديد
+    new_user_data = {
+        "national_id": legacy_user.national_id,
+        "password": legacy_user.password,
+        "full_name": legacy_user.full_name,
+        "date_of_birth": legacy_user.birthdate,  # <-- لاحظ الفرق في الاسم
+        "phone_number": legacy_user.phone_number,
+        "email": legacy_user.email,
+        "gender": legacy_user.gender,
+        "blood_type": legacy_user.blood_group, # <-- لاحظ الفرق في الاسم
+        "address": legacy_user.address,
+        "region": legacy_user.region,
+        "city": legacy_user.city,
+        "profile_picture_url": legacy_user.profile_photo,
+        "current_smoker": legacy_user.current_smoker,
+        "cigs_per_day": legacy_user.cigs_per_day,
+    }
+
+    # نقوم بإنشاء كائن من نموذجنا الصحيح
+    new_user_object = UserCreate(**new_user_data)
+
+    # --- 2. استدعاء الدالة الأصلية ---
+    # الآن نستدعي دالة create_user السليمة التي لدينا بالفعل
+    print("✅ Translation complete. Calling the main create_user function.")
+    return create_user(new_user_object)
