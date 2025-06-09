@@ -7,39 +7,45 @@ import pytz
 router = APIRouter(prefix="/measurements", tags=["Measurements"])
 egypt_tz = pytz.timezone("Africa/Cairo")
 
-# === 1. Add Height & Weight ===
+# ------------------ Add or Update Body Measurement (Height/Weight) ------------------
+
 @router.post("/body/{national_id}")
-def add_height_weight(national_id: str, entry: HeightWeightCreate):
-    height = entry.height_cm
-    weight = entry.weight_kg
-    bmi = entry.bmi
+def add_or_update_height_weight(national_id: str, entry: HeightWeightCreate):
+    height = entry.height
+    weight = entry.weight
+    added_by = entry.added_by
 
     if not height or not weight:
         raise HTTPException(status_code=400, detail="Height and weight are required")
 
-    # If BMI not provided, calculate it
-    if not bmi:
-        bmi = round(weight / ((height / 100) ** 2), 2)
-
+    bmi = round(weight / ((height / 100) ** 2), 2)
     user_ref = db.collection("Users").document(national_id)
 
     if not user_ref.get().exists:
         raise HTTPException(status_code=404, detail="User not found")
 
+    measurements_doc = user_ref.collection("ClinicalIndicators").document("measurements")
+    existing_doc = measurements_doc.get()
+
+    # If record exists, ensure only the creator can update it
+    if existing_doc.exists:
+        existing_data = existing_doc.to_dict()
+        if existing_data.get("added_by") != added_by:
+            raise HTTPException(status_code=403, detail="You are not authorized to update this record")
+
+    # Save or overwrite
     data = {
-        "height_cm": height,
-        "weight_kg": weight,
+        "height": height,
+        "weight": weight,
         "bmi": bmi,
-        "notes": entry.notes,
-        "measurement_date": entry.measurement_date,
-        "created_at": datetime.now(egypt_tz).strftime("%Y-%m-%d %H:%M:%S")
+        "added_by": added_by,
+        "date": datetime.now(egypt_tz).strftime("%Y-%m-%d %H:%M:%S")
     }
 
-    user_ref.collection("ClinicalIndicators").document("measurements").set(data)
-    return {"message": "✅ Height, weight, and BMI saved", "bmi": bmi}
+    measurements_doc.set(data)
+    return {"message": "Body measurement saved", "bmi": bmi}
 
 
-# === 2. Get Height & Weight ===
 @router.get("/body/{national_id}")
 def get_height_weight(national_id: str):
     doc = db.collection("Users").document(national_id).collection("ClinicalIndicators").document("measurements").get()

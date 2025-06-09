@@ -1,15 +1,18 @@
-# firebase_config.py
-
+from firebase_admin import storage, firestore
+import json
 import firebase_admin
-from firebase_admin import credentials, firestore, storage
+from firebase_admin import credentials, storage
+from deep_translator import GoogleTranslator
+# Initialize Firebase Admin SDK with credentials
+cred = credentials.Certificate(r"C:\Users\CLARA\Downloads\Final Graduation Project\Final Graduation Project\medi-go-eb65e-firebase-adminsdk-fbsvc-0f0bae21e5.json")
 
-# ✅ تهيئة Firebase مرة واحدة فقط
+# Initialize the app only if it hasn't been initialized yet
 if not firebase_admin._apps:
-    cred = credentials.Certificate("/etc/secrets/firebase_key.json")  # غيّر للمسار الصحيح
-    firebase_admin.initialize_app(cred, {
-        'storageBucket': 'medi-go-eb65e.firebasestorage.app'
-    })
-
-# ✅ العملاء الجاهزين
+    app = firebase_admin.initialize_app(cred, {
+        'storageBucket': 'medi-go-eb65e.firebasestorage.app' 
+})
 db = firestore.client()
-bucket = storage.bucket()
+# Now we can access the bucket
+bucket = storage.bucket() 
+# English onboarding text
+# English text

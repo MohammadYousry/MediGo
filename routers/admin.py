@@ -6,12 +6,22 @@ from models.schema import FacilityCreateRequest, Facility, DoctorsCreateRequest,
 from firebase_config import db
 from routers.user_role import ALLOWED_ROLES
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI
 
 router = APIRouter(prefix="", tags=["Admin"])
 
-# Optional: Enable CORS if needed for frontend access
+# Optional: Enable CORS for frontend access
 origins = ["*"]
 
+app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+app.include_router(router)
 
 @router.get("/facilities")
 def search_facilities(name: str = Query("", alias="name"), id: str = Query("", alias="id")):
@@ -103,8 +113,10 @@ def create_doctor(admin_id: str, data: DoctorsCreateRequest):
     if doc_ref.get().exists:
         raise HTTPException(status_code=400, detail="Doctor already exists by email")
 
+    # Save doctor
     doc_ref.set(doctor_data.dict())
 
+    # Migrate fallback assignments to new doctor record
     assignments = db.collection("DoctorAssignments") \
         .where("doctor_email", "==", data.email).stream()
 
@@ -128,12 +140,24 @@ def create_doctor(admin_id: str, data: DoctorsCreateRequest):
         db.collection("DoctorAssignments").document(doc.id).delete()
         migrated.append(patient_id)
 
+    # ✅ Remove notifications after doctor is registered
+    notif_ref = db.collection("AdminNotifications") \
+        .document("unregistered_doctors") \
+        .collection("Notifications")
+
+    to_delete = notif_ref.where("doctor_email", "==", data.email).stream()
+    deleted_notif_ids = []
+    for notif in to_delete:
+        notif.reference.delete()
+        deleted_notif_ids.append(notif.id)
+
     return {
         "message": "Doctor created successfully",
         "login_id": doctor_id,
         "password": password,
         "migrated_patients": migrated,
-        "migrated_count": len(migrated)
+        "migrated_count": len(migrated),
+        "deleted_notifications": deleted_notif_ids
     }
 
 @router.put("/doctors/{doctor_id}")

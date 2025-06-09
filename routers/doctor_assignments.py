@@ -1,78 +1,69 @@
 from datetime import datetime
-from uuid import uuid4
 from fastapi import APIRouter, HTTPException
 from typing import Optional
 from firebase_config import db
-from models.schema import DoctorAssignmentCreate
+from models.schema import DoctorAssignment
 
 router = APIRouter(prefix="/doctor-assignments", tags=["Doctor Assignments"])
-
-# 📌 Assign a doctor (registered or not)
 @router.post("/")
-def assign_doctor(assignment: DoctorAssignmentCreate):
-    assigned_to = "admin"
-    doctor_registered = False
-    assignment_id = str(uuid4())  # ✅ generate unique ID
-
+def assign_doctor(assignment: DoctorAssignment):
+    doc_id = f"{assignment.doctor_email}_{assignment.patient_national_id}"
     doctor_query = db.collection("Doctors").where("email", "==", assignment.doctor_email).limit(1).stream()
     doctor_doc = next(doctor_query, None)
 
-    doc_id = f"{assignment.doctor_email}_{assignment.patient_national_id}"
+    assigned_to = "admin"
 
     if doctor_doc:
+        # ✅ Doctor exists → save in Doctors/{email}/AssignedPatients/
         assigned_to = assignment.doctor_email
-        doctor_registered = True
+
         db.collection("Doctors").document(assignment.doctor_email) \
             .collection("AssignedPatients") \
             .document(assignment.patient_national_id).set({
                 "patient_national_id": assignment.patient_national_id,
                 "assigned_at": datetime.now().isoformat()
             })
+
+        return {
+            "assigned_to": assigned_to,
+            "message": f"✅ Doctor {assignment.doctor_email} assigned to patient {assignment.patient_national_id} and saved under AssignedPatients"
+        }
+
     else:
+        # ❌ Doctor not registered → save fallback + notify admin
         db.collection("DoctorAssignments").document(doc_id).set({
-            "assignment_id": assignment_id,
             "doctor_email": assignment.doctor_email,
-            "doctor_name": getattr(assignment, "doctor_name", "Unknown"),
+            "doctor_name": assignment.doctor_name,
             "patient_national_id": assignment.patient_national_id,
             "assigned_to": assigned_to,
-            "assignment_date": assignment.assignment_date,
-            "notes": assignment.notes
+            "status": "pending",
+            "timestamp": datetime.now().isoformat()
         })
 
         db.collection("AdminNotifications").document("unregistered_doctors") \
             .collection("Notifications").document(doc_id).set({
                 "patient_national_id": assignment.patient_national_id,
                 "doctor_email": assignment.doctor_email,
-                "message": f"⚠️ Patient {assignment.patient_national_id} was assigned to '{assignment.doctor_email}', who is NOT registered.",
+                "message": f"Patient {assignment.patient_national_id} was assigned to unregistered doctor {assignment.doctor_email}",
                 "timestamp": datetime.now().isoformat()
             })
 
-    return {
-        "assigned_to": assigned_to,
-        "assignment_id": assignment_id,
-        "message": f"Doctor {assignment.doctor_email} assigned to patient {assignment.patient_national_id}",
-        "admin_alert": None if doctor_registered else "Unregistered doctor — admin notified"
-    }
+        return {
+            "assigned_to": assigned_to,
+            "message": f"Unregistered doctor. Assignment saved to fallback.",
+            "admin_alert": "Admin notified for unregistered doctor."
+        }
 
 
-# 📌 Check if doctor assigned
-@router.get("/check")
-def check_doctor(patient_national_id: str):
+def is_doctor_assigned(patient_national_id: str) -> Optional[str]:
+    # First check fallback DoctorAssignments
     docs = db.collection("DoctorAssignments") \
         .where("patient_national_id", "==", patient_national_id) \
         .stream()
-
     for doc in docs:
-        doctor_email = doc.to_dict().get("doctor_email")
-        if doctor_email:
-            doctor_doc = db.collection("Doctors").document(doctor_email).get()
-            if doctor_doc.exists:
-                doctor_data = doctor_doc.to_dict()
-                return {
-                    "email": doctor_email,
-                    "name": doctor_data.get("doctor_name", "Unknown")
-                }
+        return doc.to_dict().get("doctor_email")
 
+    # If not found, check all registered doctors
     doctors = db.collection("Doctors").stream()
     for doctor in doctors:
         doctor_email = doctor.id
@@ -80,6 +71,34 @@ def check_doctor(patient_national_id: str):
             .document(doctor_email) \
             .collection("AssignedPatients") \
             .document(patient_national_id).get()
+        if assigned_doc.exists:
+            return doctor_email
+
+    return None
+
+@router.get("/check")
+def check_doctor(patient_national_id: str):
+    # First, check fallback DoctorAssignments
+    docs = db.collection("DoctorAssignments") \
+        .where("patient_national_id", "==", patient_national_id) \
+        .stream()
+
+    for doc in docs:
+        fallback = doc.to_dict()
+        return {
+            "email": fallback.get("doctor_email"),
+            "name": fallback.get("doctor_name", "Unknown")
+        }
+
+    # Second, check registered doctors' AssignedPatients
+    doctors = db.collection("Doctors").stream()
+    for doctor in doctors:
+        doctor_email = doctor.id
+        assigned_doc = db.collection("Doctors") \
+            .document(doctor_email) \
+            .collection("AssignedPatients") \
+            .document(patient_national_id).get()
+
         if assigned_doc.exists:
             doctor_data = db.collection("Doctors").document(doctor_email).get().to_dict()
             return {
@@ -90,7 +109,6 @@ def check_doctor(patient_national_id: str):
     raise HTTPException(status_code=404, detail="No doctor assigned to this patient.")
 
 
-# 📌 Auto-assign fallback reviewer by region
 def auto_assign_reviewer(patient_national_id: str) -> dict:
     user_ref = db.collection("Users").document(patient_national_id)
     user_doc = user_ref.get()
@@ -116,37 +134,59 @@ def auto_assign_reviewer(patient_national_id: str) -> dict:
 
     return {"assigned_to": "admin", "assigned_type": "admin"}
 
-
-# 📌 Get all patients assigned to a doctor
 @router.get("/{doctor_email}/patients")
 def get_patients_for_doctor(doctor_email: str):
+    # Check in fallback DoctorAssignments
     assignments = db.collection("DoctorAssignments") \
         .where("doctor_email", "==", doctor_email).stream()
     
     patients = [doc.to_dict() for doc in assignments]
 
+    # Check in registered doctor subcollection
     doctor_ref = db.collection("Doctors").document(doctor_email)
     if doctor_ref.get().exists:
         assigned = doctor_ref.collection("AssignedPatients").stream()
         patients += [doc.to_dict() for doc in assigned]
 
     return patients
-# 📌 Simple helper to get assigned doctor email if registered or in fallback
-def is_doctor_assigned(national_id: str) -> Optional[str]:
-    doc_ref = db.collection("DoctorAssignments") \
-        .where("patient_national_id", "==", national_id) \
-        .limit(1).stream()
-    for doc in doc_ref:
-        return doc.to_dict().get("doctor_email")
+@router.get("/doctors")
+def search_doctors(email: str = ""):
+    docs = db.collection("Doctors").where("email", ">=", email).stream()
+    return [doc.to_dict() for doc in docs]
 
-    # Check inside registered doctors
-    doctors = db.collection("Doctors").stream()
-    for doctor in doctors:
-        assigned_doc = db.collection("Doctors") \
-            .document(doctor.id) \
-            .collection("AssignedPatients") \
-            .document(national_id).get()
-        if assigned_doc.exists:
-            return doctor.id
 
-    return None
+# @router.post("/migrate-fallbacks")
+# def migrate_doctor_assignments_to_registered_doctors():
+#     assignments = db.collection("DoctorAssignments").stream()
+#     migrated = []
+
+#     for doc in assignments:
+#         data = doc.to_dict()
+#         doctor_email = data.get("doctor_email")
+#         patient_id = data.get("patient_national_id")
+
+#         if not doctor_email or not patient_id:
+#             continue
+
+#         doctor_ref = db.collection("Doctors").document(doctor_email)
+#         if not doctor_ref.get().exists:
+#             continue
+
+#         user_ref = db.collection("Users").document(patient_id)
+#         user_doc = user_ref.get()
+#         full_name = user_doc.to_dict().get("full_name", "Unknown") if user_doc.exists else "Unknown"
+
+#         doctor_ref.collection("AssignedPatients").document(patient_id).set({
+#             "patient_national_id": patient_id,
+#             "full_name": full_name,
+#             "assigned_at": datetime.now().isoformat()
+#         })
+
+#         db.collection("DoctorAssignments").document(doc.id).delete()
+#         migrated.append(patient_id)
+
+#     return {
+#         "migrated": migrated,
+#         "count": len(migrated),
+#         "message": f"✅ Migrated {len(migrated)} fallback assignments to registered doctors."
+#     }

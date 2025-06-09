@@ -8,14 +8,23 @@ from routers.doctor_assignments import auto_assign_reviewer
 egypt_tz = pytz.timezone("Africa/Cairo")
 router = APIRouter(prefix="/pending", tags=["Pending Approvals"])
 
-# 🔎 Resolve Firestore doc ID from reviewer ID
+# 🔎 Resolve Firestore doc ID from reviewer ID (doctor_email, facility_name, or 'admin')
 def resolve_reviewer_doc_id(assigned_to_id: str) -> str:
-    facilities = db.collection("Facilities").where("facility_id", "==", assigned_to_id).stream()
-    for doc in facilities:
-        return doc.id
+    # Check for facility_name match
+    facility_docs = db.collection("Facilities").stream()
+    for doc in facility_docs:
+        if doc.to_dict().get("facility_name") == assigned_to_id:
+            return doc.id
 
+    # Check for registered doctor email
     doctor_doc = db.collection("Doctors").document(assigned_to_id).get()
     if doctor_doc.exists:
+        return assigned_to_id
+
+    # Check fallback doctor assignment email
+    fallback_doc = db.collection("DoctorAssignments") \
+        .where("doctor_email", "==", assigned_to_id).limit(1).stream()
+    for _ in fallback_doc:
         return assigned_to_id
 
     if assigned_to_id == "admin":
@@ -40,7 +49,6 @@ def get_pending_approvals_for_reviewer(assigned_to: str):
     return results
 
 
-# === ✅ APPROVE with reviewer_name (for deletion from PendingApprovals/<name>)
 @router.post("/approve/{assigned_to}/{doc_id}")
 def approve_pending(assigned_to: str, doc_id: str, reviewer_name: str = ""):
     reviewer_doc_id = resolve_reviewer_doc_id(assigned_to)
@@ -72,12 +80,10 @@ def approve_pending(assigned_to: str, doc_id: str, reviewer_name: str = ""):
     timestamp = datetime.now(egypt_tz).strftime("%Y-%m-%d %H:%M:%S")
     record["date_added"] = timestamp
 
-    # ✅ Store in ClinicalIndicators
     user_ref.collection("ClinicalIndicators") \
         .document(data_type).collection("Records") \
         .document(timestamp).set(record)
 
-    # ✅ Archive to ApprovedApprovals
     db.collection("ApprovedApprovals").document(reviewer_doc_id) \
         .collection(found_collection).document(doc_id).set({
             "national_id": national_id,
@@ -87,24 +93,20 @@ def approve_pending(assigned_to: str, doc_id: str, reviewer_name: str = ""):
             "approved_by": assigned_to
         })
 
-    # ✅ Remove from reviewer_name (human-readable doc) if provided
     if reviewer_name:
         doc_ref = db.collection("PendingApprovals").document(reviewer_name).collection(found_collection).document(doc_id)
         if doc_ref.get().exists:
             doc_ref.delete()
-            print(f"✅ Deleted from {reviewer_name}/{found_collection}/{doc_id}")
 
-    # ✅ Remove from all reviewers
     all_reviewers = db.collection("PendingApprovals").stream()
     for reviewer in all_reviewers:
         doc_ref = db.collection("PendingApprovals").document(reviewer.id).collection(found_collection).document(doc_id)
         if doc_ref.get().exists:
             doc_ref.delete()
 
-    return {"message": f"✅ Approved and saved under {national_id}/{data_type} with ID {timestamp}"}
+    return {"message": f"Approved and saved under {national_id}/{data_type} with ID {timestamp}"}
 
 
-# === ✅ REJECT with reviewer_name (for deletion from PendingApprovals/<name>)
 @router.delete("/reject/{assigned_to}/{doc_id}")
 def reject_pending(assigned_to: str, doc_id: str, reviewer_name: str = ""):
     reviewer_doc_id = resolve_reviewer_doc_id(assigned_to)
@@ -126,21 +128,18 @@ def reject_pending(assigned_to: str, doc_id: str, reviewer_name: str = ""):
                     "rejected_by": assigned_to
                 })
 
-            # ✅ Remove from reviewer_name
             if reviewer_name:
                 doc_ref = db.collection("PendingApprovals").document(reviewer_name).collection(col.id).document(doc_id)
                 if doc_ref.get().exists:
                     doc_ref.delete()
-                    print(f"❌ Deleted from {reviewer_name}/{col.id}/{doc_id}")
 
-            # ✅ Remove from all reviewers
             all_reviewers = db.collection("PendingApprovals").stream()
             for reviewer in all_reviewers:
                 doc_ref = db.collection("PendingApprovals").document(reviewer.id).collection(col.id).document(doc_id)
                 if doc_ref.get().exists:
                     doc_ref.delete()
 
-            return {"message": f"❌ Rejected and removed {doc_id} from {col.id}"}
+            return {"message": f"Rejected and removed {doc_id} from {col.id}"}
 
     raise HTTPException(status_code=404, detail="Pending record not found")
 
