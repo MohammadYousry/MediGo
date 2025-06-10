@@ -2,7 +2,6 @@ fastapi
 uvicorn
 firebase-admin
 pytz
-python-dotenv
 tensorflow
 numpy
 pydantic[email]
@@ -10,3 +9,4 @@ google-cloud-storage
 requests
 easyocr
 arabic-reshaper
+python-multipart
