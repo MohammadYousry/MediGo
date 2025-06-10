@@ -4,7 +4,8 @@ firebase-admin
 pytz
 tensorflow
 numpy
-pydantic[email]
+pydantic==1.10.12
+email-validator
 google-cloud-storage
 requests
 easyocr
