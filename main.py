@@ -8,7 +8,7 @@ from routers import (
     users,pending_approvals, doctor_assignments,
     surgeries, bloodbiomarkers, measurements, radiology, hypertension,
     medications, diagnoses, allergies, family_history,
-    emergency_contacts, risk_assessment, admin, user_role, auth, facilities, qrcode,send_email,translate
+    emergency_contacts, risk_assessment, admin, user_role, auth, facilities, qrcode,send_email
 )
 
 app = FastAPI(title="MediGO Backend", version="1.0")
@@ -43,7 +43,6 @@ app.include_router(emergency_contacts.router)
 app.include_router(risk_assessment.router)
 app.include_router(user_role.router)
 app.include_router(send_email.router)
-app.include_router(translate.router)
 @app.get("/")
 def root():
     return {"message": "Welcome to the MediGO FastAPI Backend"}

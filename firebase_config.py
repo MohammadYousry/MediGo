@@ -1,8 +1,8 @@
 from firebase_admin import storage, firestore
-import json
+
 import firebase_admin
 from firebase_admin import credentials, storage
-from deep_translator import GoogleTranslator
+
 # Initialize Firebase Admin SDK with credentials
 cred = credentials.Certificate(r"C:\Users\CLARA\Downloads\Final Graduation Project\Final Graduation Project\medi-go-eb65e-firebase-adminsdk-fbsvc-0f0bae21e5.json")
 
@@ -14,5 +14,3 @@ if not firebase_admin._apps:
 db = firestore.client()
 # Now we can access the bucket
 bucket = storage.bucket() 
-# English onboarding text
-# English text

@@ -81,7 +81,6 @@ class UserCreate(BaseModel):
     city: str
     current_smoker: bool = False
     cigs_per_day: int = 0
-    doctoremail: Optional[str] = None
 
     @field_validator("national_id")
     @classmethod
@@ -118,8 +117,7 @@ class UserResponse(BaseModel):
     current_smoker: Optional[bool] = None
     cigs_per_day: Optional[int] = None
     age: Optional[int] = None
-    doctoremail: Optional[str] = None
-    
+
 # ----------------- Doctors -----------------
 class Doctors(BaseModel):
     doctor_id: str

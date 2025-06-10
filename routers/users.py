@@ -1,8 +1,8 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException
 from firebase_config import db
 from models.schema import UserCreate, UserResponse, calculate_age
 from datetime import datetime
-from typing import List, Optional
+from typing import List
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -17,7 +17,12 @@ def create_user(user: UserCreate):
     if user_ref.get().exists:
         raise HTTPException(status_code=400, detail="User already exists")
 
-    age = calculate_age(user.birthdate)
+    # calculate age
+    try:
+        age = calculate_age(user.birthdate)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
     user_data = {**user.dict(), "age": age}
     user_ref.set(user_data)
 
@@ -31,7 +36,7 @@ def create_user(user: UserCreate):
               .collection("Notifications").document(notif_id).set({
                   "patient_national_id": user.national_id,
                   "doctor_email": user.doctoremail,
-                  "message": f"⚠️ Patient {user.full_name} ({user.national_id}) assigned to unregistered doctor: {user.doctoremail}",
+                  "message": f"Patient {user.full_name} ({user.national_id}) assigned to unregistered doctor: {user.doctoremail}",
                   "timestamp": datetime.now().isoformat()
               })
 
@@ -44,7 +49,11 @@ def update_user(national_id: str, user: UserCreate):
     if not user_ref.get().exists:
         raise HTTPException(status_code=404, detail="User not found")
 
-    age = calculate_age(user.birthdate)
+    try:
+        age = calculate_age(user.birthdate)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
     updated_data = {**user.dict(), "age": age}
     user_ref.update(updated_data)
     return {**user.dict(), "age": age}
@@ -60,23 +69,17 @@ def get_user(national_id: str):
 # -------------------- Get Users List --------------------
 @router.get("/", response_model=List[UserResponse])
 def get_users(name: str = "", national_id: str = ""):
-    """
-    Fetch users by name or national_id. Both fields are optional.
-    """
     users_ref = db.collection("Users")
     results = []
 
     for doc in users_ref.stream():
         user = doc.to_dict()
-        if user is None:
-            continue  # skip corrupted or empty documents
-
-        full_name = (user.get("full_name") or "").lower()
-        national = (user.get("national_id") or "").lower()
-        doctor_email = (user.get("doctoremail") or "").lower()
+        user["id"] = doc.id
+        full_name = user.get("full_name", "").lower()
+        national = user.get("national_id", "").lower()
+        doctor_email = user.get("doctoremail", "").lower()
 
         if name.lower() in full_name or national_id.lower() in national or national_id.lower() in doctor_email:
             results.append(user)
 
     return results
-
