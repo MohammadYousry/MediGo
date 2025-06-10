@@ -9,3 +9,4 @@ pydantic[email]
 google-cloud-storage
 requests
 easyocr
+arabic-reshaper
