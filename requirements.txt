@@ -6,7 +6,7 @@ email-validator
 qrcode[pil]
 pandas
 numpy==1.23.5        
-tensorflow==2.15.0    
+tensorflow==2.14.1
 scikit-learn
 catboost
 xgboost
