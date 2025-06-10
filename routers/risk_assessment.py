@@ -7,21 +7,47 @@ import joblib
 from models.schema import RiskPredictionOutput, DerivedFeatures, TopFeatures
 
 router = APIRouter(prefix="/risk", tags=["Risk Assessment"])
+# Lazy loaded models
+scaler_diabetes = None
+scaler_hypertension = None
+selector_dia = None
+selector_hyp = None
+model_diabetes = None
+model_hypertension = None
+selected_features_dia = None
+selected_features_hyp = None
+
+def load_models():
+    global scaler_diabetes, scaler_hypertension, selector_dia, selector_hyp
+    global model_diabetes, model_hypertension, selected_features_dia, selected_features_hyp
+
+    if model_diabetes is None:
+        print("🔄 Loading risk prediction models...")
+        scaler_diabetes = joblib.load("scaler_diabetes.pkl")
+        scaler_hypertension = joblib.load("scaler_hypertension.pkl")
+        selector_dia = joblib.load("selector_dia.pkl")
+        selector_hyp = joblib.load("selector_hypertension.pkl")
+        model_diabetes = joblib.load("model_diabetes.pkl")
+        model_hypertension = joblib.load("model_hypertension.pkl")
+        selected_features_dia = joblib.load("selected_diabetes_features.pkl")
+        selected_features_hyp = joblib.load("selected_hypertension_features.pkl")
+        print("✅ Models loaded successfully.")
 
 # Load models and preprocessing assets
-scaler_diabetes = joblib.load("scaler_diabetes.pkl")
-scaler_hypertension = joblib.load("scaler_hypertension.pkl")
-selector_dia = joblib.load("selector_dia.pkl")
-selector_hyp = joblib.load("selector_hypertension.pkl")
-model_diabetes = joblib.load("model_diabetes.pkl")
-model_hypertension = joblib.load("model_hypertension.pkl")
-selected_features_dia = joblib.load("selected_diabetes_features.pkl")
-selected_features_hyp = joblib.load("selected_hypertension_features.pkl")
+#scaler_diabetes = joblib.load("scaler_diabetes.pkl")
+#scaler_hypertension = joblib.load("scaler_hypertension.pkl")
+#selector_dia = joblib.load("selector_dia.pkl")
+#selector_hyp = joblib.load("selector_hypertension.pkl")
+#model_diabetes = joblib.load("model_diabetes.pkl")
+#model_hypertension = joblib.load("model_hypertension.pkl")
+#selected_features_dia = joblib.load("selected_diabetes_features.pkl")
+#selected_features_hyp = joblib.load("selected_hypertension_features.pkl")
 
 
 @router.post("/{national_id}", response_model=RiskPredictionOutput)
 async def assess_risk(national_id: str):
     try:
+        load_models()
         # === 1. Get User Info ===
         user_doc = db.collection("Users").document(national_id).get()
         if not user_doc.exists:
