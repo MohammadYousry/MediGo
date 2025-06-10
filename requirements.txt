@@ -11,3 +11,4 @@ easyocr
 arabic-reshaper
 python-multipart
 pandas
+joblib
