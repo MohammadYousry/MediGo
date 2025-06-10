@@ -178,10 +178,23 @@ PATIENT_INFO_PATTERNS = {
 }
 
 # ─── Initialize EasyOCR Reader ──────────────────────────────────────
-reader = easyocr.Reader(['en', 'ar'])
+_reader_instance = None
+def get_reader():
+    global _reader_instance
+    if _reader_instance is None:
+        import easyocr
+        _reader_instance = easyocr.Reader(['en', 'ar'])
+    return _reader_instance
+
 
 # ─── Load Classification Model ──────────────────────────────────────
-model = tf.keras.models.load_model(MODEL_PATH)
+_model_instance = None
+def get_model():
+    global _model_instance
+    if _model_instance is None:
+        _model_instance = tf.keras.models.load_model(MODEL_PATH)
+    return _model_instance
+
 
 # ─── UTILITIES ──────────────────────────
 def preprocess_arabic_text(text):
@@ -196,13 +209,17 @@ def enhance_image_quality(image):
 
 def classify_image(image: Image.Image):
     arr = np.array(image.resize(IMG_SIZE)) / 255.0
+    model = get_model()
     v_prob, d_prob = model.predict(arr[np.newaxis], verbose=0)
     return float(v_prob[0, 0]), float(d_prob[0, 0])
+
 
 def extract_text_with_easyocr(image: Image.Image) -> str:
     if image.mode != 'RGB':
         image = image.convert('RGB')
+    reader = get_reader()
     return "\n".join([res[1] for res in reader.readtext(np.array(image))])
+
 
 def normalize_unit(unit: str) -> str:
     unit = unit.replace(" ", "").replace("?", "").replace(":", "").replace("’", "").replace("‘", "").lower()
