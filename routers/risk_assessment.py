@@ -7,7 +7,8 @@ import joblib
 from models.schema import RiskPredictionOutput, DerivedFeatures, TopFeatures
 
 router = APIRouter(prefix="/risk", tags=["Risk Assessment"])
-# Lazy loaded models
+
+# Lazy-loaded model components
 scaler_diabetes = None
 scaler_hypertension = None
 selector_dia = None
@@ -17,11 +18,12 @@ model_hypertension = None
 selected_features_dia = None
 selected_features_hyp = None
 
+# ✅ Lazy loading function
 def load_models():
     global scaler_diabetes, scaler_hypertension, selector_dia, selector_hyp
     global model_diabetes, model_hypertension, selected_features_dia, selected_features_hyp
 
-    if model_diabetes is None:
+    if model_diabetes is None or model_hypertension is None:
         print("🔄 Loading risk prediction models...")
         scaler_diabetes = joblib.load("scaler_diabetes.pkl")
         scaler_hypertension = joblib.load("scaler_hypertension.pkl")
@@ -31,64 +33,50 @@ def load_models():
         model_hypertension = joblib.load("model_hypertension.pkl")
         selected_features_dia = joblib.load("selected_diabetes_features.pkl")
         selected_features_hyp = joblib.load("selected_hypertension_features.pkl")
-        print("✅ Models loaded successfully.")
+        print("✅ Models loaded.")
 
-# Load models and preprocessing assets
-#scaler_diabetes = joblib.load("scaler_diabetes.pkl")
-#scaler_hypertension = joblib.load("scaler_hypertension.pkl")
-#selector_dia = joblib.load("selector_dia.pkl")
-#selector_hyp = joblib.load("selector_hypertension.pkl")
-#model_diabetes = joblib.load("model_diabetes.pkl")
-#model_hypertension = joblib.load("model_hypertension.pkl")
-#selected_features_dia = joblib.load("selected_diabetes_features.pkl")
-#selected_features_hyp = joblib.load("selected_hypertension_features.pkl")
-
-
+# ✅ Main Endpoint
 @router.post("/{national_id}", response_model=RiskPredictionOutput)
 async def assess_risk(national_id: str):
     try:
-        load_models()
-        # === 1. Get User Info ===
+        load_models()  # Ensure models are loaded
+
+        # === 1. Load User Info ===
         user_doc = db.collection("Users").document(national_id).get()
         if not user_doc.exists:
             raise HTTPException(status_code=404, detail="User not found")
         user = user_doc.to_dict()
 
-        # === 2. Measurements ===
-        measurements_doc = db.collection("Users").document(national_id).collection("ClinicalIndicators").document("measurements").get()
-        measurements = measurements_doc.to_dict()
+        # === 2. Load Measurements ===
+        measurements = db.collection("Users").document(national_id)\
+            .collection("ClinicalIndicators").document("measurements").get().to_dict()
         if not measurements:
             raise HTTPException(status_code=404, detail="Missing measurements")
 
-        # === 3. Latest Hypertension Record ===
-        hyp_docs = db.collection("Users").document(national_id).collection("ClinicalIndicators") \
-            .document("Hypertension").collection("Records").order_by("date", direction="DESCENDING").limit(1).stream()
-        hypertension_data = next(hyp_docs, None)
-        hypertension = hypertension_data.to_dict() if hypertension_data else {}
+        # === 3. Load Hypertension Record ===
+        hyp_docs = db.collection("Users").document(national_id)\
+            .collection("ClinicalIndicators").document("Hypertension")\
+            .collection("Records").order_by("date", direction="DESCENDING").limit(1).stream()
+        hypertension = next(hyp_docs, None)
+        hypertension = hypertension.to_dict() if hypertension else {}
 
-        # === 4. Latest Biomarker Record ===
-        bio_docs = db.collection("Users").document(national_id).collection("ClinicalIndicators") \
-            .document("bloodbiomarkers").collection("Records").order_by("date_added", direction="DESCENDING").limit(1).stream()
-        biomarker_data = next(bio_docs, None)
-        biomarkers = biomarker_data.to_dict() if biomarker_data else {}
+        # === 4. Load Blood Biomarkers ===
+        bio_docs = db.collection("Users").document(national_id)\
+            .collection("ClinicalIndicators").document("bloodbiomarkers")\
+            .collection("Records").order_by("date_added", direction="DESCENDING").limit(1).stream()
+        biomarkers = next(bio_docs, None)
+        biomarkers = biomarkers.to_dict() if biomarkers else {}
 
-        # === 5. Latest Medication ===
-        med_docs = db.collection("Users").document(national_id).collection("medications") \
+        # === 5. Load Medications ===
+        med_docs = db.collection("Users").document(national_id).collection("medications")\
             .order_by("start_date", direction="DESCENDING").limit(1).stream()
-        medication_data = next(med_docs, None)
-        medications = medication_data.to_dict() if medication_data else {}
+        medications = next(med_docs, None)
+        medications = medications.to_dict() if medications else {}
 
-        # === 6. Calculate BMI Category ===
+        # === 6. BMI Logic ===
         bmi = measurements.get("bmi", 25.0)
-        if bmi < 18.5:
-            bmi_category = 0
-        elif 18.5 <= bmi < 25:
-            bmi_category = 1
-        elif 25 <= bmi < 30:
-            bmi_category = 2
-        else:
-            bmi_category = 3
-        is_obese = 1 if bmi >= 30 else 0
+        bmi_category = 0 if bmi < 18.5 else 1 if bmi < 25 else 2 if bmi < 30 else 3
+        is_obese = int(bmi >= 30)
 
         # === 7. Assemble Features ===
         features = {
@@ -104,7 +92,7 @@ async def assess_risk(national_id: str):
             'is_obese': is_obese,
             'bp_category': int(hypertension.get("bp_category", 0)),
             'bmi_category': bmi_category,
-            'male_smoker': int(1 if user.get("gender") == "male" and user.get("smoker_status", 0) > 0 else 0),
+            'male_smoker': int(user.get("gender") == "male" and user.get("smoker_status", 0) > 0),
             'prediabetes_indicator': int(hypertension.get("prediabetes_indicator", 0)),
             'insulin_resistance': int(hypertension.get("insulin_resistance", 0)),
             'metabolic_syndrome': int(hypertension.get("metabolic_syndrome", 0))
@@ -113,94 +101,50 @@ async def assess_risk(national_id: str):
         # === 8. Predict Diabetes ===
         X_dia = pd.DataFrame([features])
         X_dia["hypertension"] = 0.5
-        X_dia = X_dia[scaler_diabetes.feature_names_in_]
-        scaled_dia = scaler_diabetes.transform(X_dia)
+        scaled_dia = scaler_diabetes.transform(X_dia[scaler_diabetes.feature_names_in_])
         selected_dia = selector_dia.transform(scaled_dia)
         diabetes_prob = float(model_diabetes.predict_proba(selected_dia)[0][1])
 
         # === 9. Predict Hypertension ===
         X_hyp = pd.DataFrame([features])
         X_hyp["diabetes"] = diabetes_prob
-        X_hyp = X_hyp[scaler_hypertension.feature_names_in_]
-        scaled_hyp = scaler_hypertension.transform(X_hyp)
+        scaled_hyp = scaler_hypertension.transform(X_hyp[scaler_hypertension.feature_names_in_])
         selected_hyp = selector_hyp.transform(scaled_hyp)
         hypertension_prob = float(model_hypertension.predict_proba(selected_hyp)[0][1])
 
-        # === 10. Get Base Model ===
-        def get_base_model(model):
-            if hasattr(model, "named_estimators_"):
-                for key in model.named_estimators_:
-                    return model.named_estimators_[key]
-            if hasattr(model, "estimators_"):
-                return model.estimators_[0]
-            return model
-
-        # === 11. Top Features (Cleaned) ===
+        # === 10. Top Feature Extraction Function ===
         def top_features(model, X_selected, feature_names, top_n=3):
             try:
-                base_model = get_base_model(model)
+                base = model.named_estimators_[next(iter(model.named_estimators_))] if hasattr(model, "named_estimators_") else model
+                if hasattr(base, "feature_importances_"):
+                    imp = base.feature_importances_
+                elif hasattr(base, "coef_"):
+                    imp = np.abs(base.coef_[0])
+                else:
+                    raise Exception("Model doesn't support feature importances.")
+                idx = np.argsort(imp)[::-1][:top_n]
+                total = sum(imp[i] for i in idx) or 1
+                return [
+                    TopFeatures(feature_name=feature_names[i], contribution_score=round((imp[i]/total)*100, 1))
+                    for i in idx
+                ]
+            except Exception:
+                return [
+                    TopFeatures(feature_name=feature_names[i], contribution_score=round(s, 1))
+                    for i, s in zip(np.random.choice(len(feature_names), top_n, replace=False), [33.3, 33.3, 33.4])
+                ]
 
-                # === Method 1: Tree-based feature_importances_ ===
-                if hasattr(base_model, "feature_importances_"):
-                    importances = base_model.feature_importances_
-                    indices = np.argsort(importances)[::-1][:top_n]
-
-                    # Normalize to percentage
-                    top_values = importances[indices]
-                    total = top_values.sum() if top_values.sum() > 0 else 1e-8  # prevent divide by zero
-                    normalized = [(v / total) * 100 for v in top_values]
-
-                    print("[✔] Feature importances method used.")
-                    return [
-                        TopFeatures(feature_name=feature_names[i], contribution_score=round(normalized[j], 1))
-                        for j, i in enumerate(indices)
-                    ]
-
-                # === Method 2: Linear model coefficients ===
-                if hasattr(base_model, "coef_"):
-                    coeffs = np.abs(base_model.coef_[0])
-                    indices = np.argsort(coeffs)[::-1][:top_n]
-
-                    top_values = coeffs[indices]
-                    total = top_values.sum() if top_values.sum() > 0 else 1e-8
-                    normalized = [(v / total) * 100 for v in top_values]
-
-                    print("[✔] Coefficient method used.")
-                    return [
-                        TopFeatures(feature_name=feature_names[i], contribution_score=round(normalized[j], 1))
-                        for j, i in enumerate(indices)
-                    ]
-
-            except Exception as e:
-                print(f"[×] Feature extraction failed: {e}")
-
-            # === Fallback: Arbitrary importance ===
-            print("[⚠] Fallback: Arbitrary feature importance used.")
-            arbitrary_scores = np.linspace(0.8, 0.2, top_n)
-            total = arbitrary_scores.sum()
-            normalized = [(v / total) * 100 for v in arbitrary_scores]
-            random_indices = np.random.choice(len(feature_names), top_n, replace=False)
-
-            return [
-                TopFeatures(feature_name=feature_names[i], contribution_score=round(normalized[j], 1))
-                for j, i in enumerate(random_indices)
-            ]
-
+        # === 11. Get Top Features
         dia_top = top_features(model_diabetes, selected_dia, selected_features_dia)
         hyp_top = top_features(model_hypertension, selected_hyp, selected_features_hyp)
 
-        # === 12. Derived Features ===
-        age_group_map = {0: "Young", 1: "Middle-aged", 2: "Older"}
-        smoker_status_map = {0: "Non-smoker", 1: "Light smoker", 2: "Moderate smoker", 3: "Heavy smoker"}
-        bp_category_map = {-1: "Low", 0: "Normal", 1: "Elevated", 2: "Stage 1", 3: "Stage 2"}
-        bmi_category_map = {0: "Underweight", 1: "Normal", 2: "Overweight", 3: "Obese"}
-
+        # === 12. Derived Values
         derived = DerivedFeatures(
-            age_group=age_group_map.get(features["age_group"], "Middle-aged"),
-            smoker_status=smoker_status_map.get(features["smoker_status"], "Non-smoker"),
-            is_obese=bool(features["is_obese"]),
-            bp_category=bp_category_map.get(features["bp_category"], "Normal"),
-            bmi_category=bmi_category_map.get(features["bmi_category"], "Normal"),
+            age_group={0: "Young", 1: "Middle-aged", 2: "Older"}.get(features["age_group"], "Middle-aged"),
+            smoker_status={0: "Non-smoker", 1: "Light", 2: "Moderate", 3: "Heavy"}.get(features["smoker_status"], "Non-smoker"),
+            is_obese=bool(is_obese),
+            bp_category={-1: "Low", 0: "Normal", 1: "Elevated", 2: "Stage 1", 3: "Stage 2"}.get(features["bp_category"], "Normal"),
+            bmi_category={0: "Underweight", 1: "Normal", 2: "Overweight", 3: "Obese"}.get(bmi_category, "Normal"),
             bmi=bmi,
             pulse_pressure=features["sysBP"] - features["diaBP"],
             male_smoker=bool(features["male_smoker"]),
@@ -210,22 +154,22 @@ async def assess_risk(national_id: str):
         )
 
         result = RiskPredictionOutput(
-            diabetes_risk=round(diabetes_prob*100, 2),
-            hypertension_risk=round(hypertension_prob*100, 2),
+            diabetes_risk=round(diabetes_prob * 100, 2),
+            hypertension_risk=round(hypertension_prob * 100, 2),
             derived_features=derived,
             input_values=features,
             top_diabetes_features=dia_top,
             top_hypertension_features=hyp_top
         )
 
-        # === 13. Save to Firestore ===
-        timestamp = datetime.now()
-        db.collection("Users").document(national_id).collection("risk_predictions") \
-            .document(timestamp.strftime("%Y%m%d_%H%M%S")).set({
+        # === 13. Save to Firestore
+        now = datetime.now()
+        db.collection("Users").document(national_id).collection("risk_predictions")\
+            .document(now.strftime("%Y%m%d_%H%M%S")).set({
                 **result.dict(),
-                "timestamp": timestamp.isoformat(),
-                "display_time": timestamp.strftime("%B %d, %Y at %I:%M %p"),
-                "sortable_time": timestamp.strftime("%Y-%m-%d %H:%M:%S")
+                "timestamp": now.isoformat(),
+                "display_time": now.strftime("%B %d, %Y at %I:%M %p"),
+                "sortable_time": now.strftime("%Y-%m-%d %H:%M:%S")
             })
 
         return result
