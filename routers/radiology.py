@@ -5,6 +5,8 @@ from models.schema import RadiologyTest, resolve_added_by_name, fetch_patient_na
 from routers.doctor_assignments import is_doctor_assigned, auto_assign_reviewer
 from firebase_config import db, bucket
 from routers.image_classifier import classify_radiology_image
+from main import load_multitask_model, model
+
 
 router = APIRouter(prefix="/radiology", tags=["Radiology"])
 egypt_tz = pytz.timezone("Africa/Cairo")
@@ -48,6 +50,7 @@ async def add_radiology(
     report_notes: str = Form(None),
     date_str: str = Form(None)
 ):
+    load_multitask_model()
     user_ref = db.collection("Users").document(national_id)
     if not user_ref.get().exists:
         raise HTTPException(status_code=404, detail="User not found")
@@ -152,7 +155,6 @@ def get_radiology(national_id: str):
     user_ref = db.collection("Users").document(national_id)
     if not user_ref.get().exists:
         raise HTTPException(status_code=404, detail="User not found")
-
     docs = user_ref.collection("ClinicalIndicators").document("radiology").collection("Records").stream()
     records = []
     for doc in docs:
