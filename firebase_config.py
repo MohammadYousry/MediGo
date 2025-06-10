@@ -1,16 +1,13 @@
-from firebase_admin import storage, firestore
-
+import os
+import json
 import firebase_admin
-from firebase_admin import credentials, storage
+from firebase_admin import credentials, firestore
 
-# Initialize Firebase Admin SDK with credentials
-cred = credentials.Certificate(r"C:\Users\CLARA\Downloads\Final Graduation Project\Final Graduation Project\medi-go-eb65e-firebase-adminsdk-fbsvc-0f0bae21e5.json")
+if "FIREBASE_CREDENTIALS_JSON" in os.environ:
+    firebase_creds = json.loads(os.environ["FIREBASE_CREDENTIALS_JSON"])
+    cred = credentials.Certificate(firebase_creds)
+else:
+    raise Exception("FIREBASE_CREDENTIALS_JSON env var not found")
 
-# Initialize the app only if it hasn't been initialized yet
-if not firebase_admin._apps:
-    app = firebase_admin.initialize_app(cred, {
-        'storageBucket': 'medi-go-eb65e.firebasestorage.app' 
-})
+firebase_admin.initialize_app(cred)
 db = firestore.client()
-# Now we can access the bucket
-bucket = storage.bucket() 
