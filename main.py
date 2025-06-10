@@ -1,3 +1,29 @@
+import os
+import tensorflow as tf
+import requests
+
+MODEL_URL = "https://storage.googleapis.com/medi-go-eb65e.firebasestorage.app/models/multitask_lab_reports_model.h5"
+MODEL_PATH = "/app/models/multitask_lab_reports_model.h5"
+
+# Ensure model exists
+if not os.path.exists(MODEL_PATH):
+    os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
+    print("Downloading model...")
+    response = requests.get(MODEL_URL)
+    with open(MODEL_PATH, "wb") as f:
+        f.write(response.content)
+    # Check file size after download
+    if os.path.getsize(MODEL_PATH) < 1000:  # أقل من 1KB = غالبًا الملف مش سليم
+        raise ValueError("Downloaded model file appears to be invalid or corrupted.")
+
+    print("Model downloaded.")
+
+# Load model
+print("Loading model...")
+model = tf.keras.models.load_model(MODEL_PATH)
+print("Model loaded.")
+
+
 # ✅ main.py for FastAPI Firestore Integration
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
