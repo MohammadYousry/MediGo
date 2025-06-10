@@ -2,27 +2,30 @@ import os
 import tensorflow as tf
 import requests
 
-# ✅ رابط تحميل النموذج – لازم يكون مباشر من Cloud Storage
-MODEL_URL = "https://storage.googleapis.com/medi-go-eb65e.firebasestorage.app/models/multitask_lab_reports_model.h5"
-MODEL_PATH = "/app/models/multitask_lab_reports_model.h5"
+model = None  # Global variable
 
-# ✅ تأكد إن الموديل موجود، لو مش موجود يتم تحميله
-if not os.path.exists(MODEL_PATH):
-    os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
-    print("Downloading model...")
-    response = requests.get(MODEL_URL)
-    if response.status_code != 200:
-        raise ValueError(f"Failed to download model. Status code: {response.status_code}")
-    with open(MODEL_PATH, "wb") as f:
-        f.write(response.content)
-    if os.path.getsize(MODEL_PATH) < 1000:
-        raise ValueError("Downloaded model file appears to be invalid or corrupted.")
-    print("Model downloaded.")
+def load_multitask_model():
+    global model
+    if model is None:
+        MODEL_URL = "https://storage.googleapis.com/medi-go-eb65e.firebasestorage.app/models/multitask_lab_reports_model.h5"
+        MODEL_PATH = "/app/models/multitask_lab_reports_model.h5"
 
-# ✅ تحميل النموذج
-print("Loading model...")
-model = tf.keras.models.load_model(MODEL_PATH)
-print("Model loaded.")
+        if not os.path.exists(MODEL_PATH):
+            os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
+            print("⬇️ Downloading multi-task model...")
+            response = requests.get(MODEL_URL)
+            if response.status_code != 200:
+                raise ValueError(f"Failed to download model. Status code: {response.status_code}")
+            with open(MODEL_PATH, "wb") as f:
+                f.write(response.content)
+            if os.path.getsize(MODEL_PATH) < 1000:
+                raise ValueError("Downloaded model file appears to be invalid or corrupted.")
+            print("✅ Model downloaded.")
+
+        print("🧠 Loading model into memory...")
+        model = tf.keras.models.load_model(MODEL_PATH)
+        print("✅ Model loaded.")
+
 
 
 # ✅ FastAPI setup
