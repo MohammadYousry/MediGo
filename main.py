@@ -3,7 +3,7 @@ import tensorflow as tf
 import requests
 
 # ✅ رابط تحميل النموذج – لازم يكون مباشر من Cloud Storage
-MODEL_URL = "https://storage.googleapis.com/YOUR_BUCKET_NAME/multitask_lab_reports_model.h5"
+MODEL_URL = "https://storage.googleapis.com/medi-go-eb65e.appspot.com/models/multitask_lab_reports_model.h5"
 MODEL_PATH = "/app/models/multitask_lab_reports_model.h5"
 
 # ✅ تأكد إن الموديل موجود، لو مش موجود يتم تحميله
