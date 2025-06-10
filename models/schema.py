@@ -73,6 +73,7 @@ class UserCreate(BaseModel):
     birthdate: str = Field(..., example=dt_date.today().isoformat())
     phone_number: str
     email:str
+    doctoremail: Optional[EmailStr] = None
     gender: Gender
     blood_group: BloodGroup
     marital_status: MaritalStatus
