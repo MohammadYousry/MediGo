@@ -37,38 +37,47 @@ async def save_uploaded_image(user_id: str, file: UploadFile) -> str:
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Upload to storage failed: {str(e)}")
-
-# POST /qrcode/ to upload and save metadata
+    
 @router.post("/", response_model=QRCodeResponse)
 async def create_and_save_qr_code(
     user_id: str = Form(...),
     last_accessed: str = Form(...),
     expiration_date: str = Form(...),
-    qr_image: UploadFile = File(...)
+    qr_image: UploadFile = File(...),
+    pdf_url: str = Form(...),  # PDF URL to store in the QR data
 ):
     try:
+        # Upload QR image and get its URL
         image_url = await save_uploaded_image(user_id, qr_image)
         timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
 
+        # Include PDF URL in the qr_data field
+        qr_data = f"{pdf_url}"  # Store PDF URL in qr_data
+
+        # Data to save in Firestore
         data = {
             "user_id": user_id,
             "last_accessed": timestamp,
             "expiration_date": expiration_date,
             "qr_image": image_url,
-            "qr_data": f"{user_id}|{timestamp}"
+            "qr_data": qr_data,  # Save qr_data including the PDF URL
         }
 
+        # Save the data in Firestore under the QRCodeAccess collection
         doc_ref = get_qr_code_doc_ref(user_id)
         doc_ref.set(data)
 
+        # Return the response with the QR code data
         return QRCodeResponse(
             user_id=user_id,
             last_accessed=timestamp,
             expiration_date=expiration_date,
-            qr_image=image_url
+            qr_image=image_url,
+            pdf_url=pdf_url,  # Include the PDF URL in the response
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
 
 @router.get("/{user_id}", response_model=QRCodeResponse)
 async def get_qr_code(user_id: str):
