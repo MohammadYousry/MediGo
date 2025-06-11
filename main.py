@@ -37,7 +37,7 @@ from routers import (
     users, pending_approvals, doctor_assignments,
     surgeries, bloodbiomarkers, measurements, radiology, hypertension,
     medications, diagnoses, allergies, family_history,
-    emergency_contacts, risk_assessment, admin, user_role, auth, facilities, qrcode, send_email
+    emergency_contacts, risk_assessment, admin, user_role, auth, facilities, qrcode, send_email,translate
 )
 
 app = FastAPI(title="MediGO Backend", version="1.0")
