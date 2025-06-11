@@ -10,7 +10,7 @@ steps:
     '--region', 'europe-west1',
     '--platform', 'managed',
     '--allow-unauthenticated',
-    '--set-env-vars', 'EMAIL_USER=claramagdy60@gmail.com,EMAIL_PASS=aznj srbz woif oibc,SMTP_SERVER=smtp.gmail.com,SMTP_PORT=587'
+    '--set-env-vars', 'EMAIL_USER=claramagdy60@gmail.com,EMAIL_PASS=aehz xyhw ljds rjwz,SMTP_SERVER=smtp.gmail.com,SMTP_PORT=587'
   ]
 images:
 - 'gcr.io/${PROJECT_ID}/medigo-backend-api'
