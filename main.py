@@ -72,7 +72,7 @@ app.include_router(emergency_contacts.router)
 app.include_router(risk_assessment.router)
 app.include_router(user_role.router)
 app.include_router(send_email.router)
-
+app.include_router(translate.router)
 # ✅ مسار اختباري
 @app.get("/")
 def root():
