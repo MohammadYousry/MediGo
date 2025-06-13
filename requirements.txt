@@ -7,7 +7,7 @@ qrcode[pil]
 pandas
 numpy==1.23.5        
 tensorflow
-scikit-learn
+scikit-learn>=1.2
 catboost
 xgboost
 lightgbm
